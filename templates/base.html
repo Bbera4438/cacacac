@@ -5,20 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CS:GO Upgrader{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=6">
 </head>
 <body>
-    <!-- Тёмный анимированный фон (звёздная пыль) -->
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Live‑фид (кастомный скролл) -->
     <div class="live-feed-bar" id="live-feed-bar">
-        <div class="live-feed-track" id="live-feed-track">
-            <!-- Наполнится через JavaScript -->
-        </div>
+        <div class="live-feed-track" id="live-feed-track"></div>
     </div>
 
-    <!-- Навигация -->
     <nav class="navbar">
         <div class="nav-inner">
             <a href="{{ url_for('index') }}" class="logo">
@@ -60,7 +55,16 @@
         <p>© 2024 CS:GO Upgrader. Все скины являются собственностью Valve Corporation.</p>
     </footer>
 
-    <!-- Звуковой движок (Web Audio API) -->
+    <!-- Модальное окно ежедневного бонуса -->
+    <div class="modal-overlay" id="bonus-modal" style="display: none;">
+        <div class="modal-content bonus-modal-content">
+            <h2 class="modal-title">🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
+            <p id="bonus-message"></p>
+            <button class="btn btn-buy" id="bonus-close-btn">ЗАБРАТЬ</button>
+        </div>
+    </div>
+
+    <!-- Звуковой движок -->
     <script>
         (function() {
             window.AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -184,7 +188,7 @@
                     vy: (Math.random() - 0.5) * 0.3,
                     size: Math.random() * 2 + 0.5,
                     opacity: Math.random() * 0.15 + 0.05,
-                    color: Math.random() > 0.5 ? '255, 215, 0' : '255, 255, 255' // золотой или белый
+                    color: Math.random() > 0.5 ? '255, 215, 0' : '255, 255, 255'
                 });
             }
 
@@ -208,7 +212,7 @@
         })();
     </script>
 
-    <!-- Live‑feed обновление и прокрутка -->
+    <!-- Live‑feed обновление -->
     <script>
         const feedTrack = document.getElementById('live-feed-track');
 
@@ -229,7 +233,6 @@
             .then(data => {
                 if (!feedTrack) return;
                 const items = data.map(buildFeedItem).join('');
-                // Дублируем элементы для бесшовной прокрутки
                 feedTrack.innerHTML = items + items;
             });
         }
@@ -237,29 +240,34 @@
         setInterval(updateLiveFeed, 7000);
     </script>
 
-    <!-- Ежедневный бонус -->
-    {% if user %}
+    <!-- Ежедневный бонус (модальное окно) -->
     <script>
         document.getElementById('daily-bonus-btn').addEventListener('click', () => {
             fetch('/daily_bonus')
             .then(r => r.json())
             .then(data => {
+                const modal = document.getElementById('bonus-modal');
+                const msg = document.getElementById('bonus-message');
                 if (data.error) {
-                    alert(data.error);
+                    msg.textContent = data.error;
+                    msg.style.color = '#e74c3c';
                 } else {
-                    if (window.playBonusSound) playBonusSound();
+                    msg.textContent = data.message;
+                    msg.style.color = '#4caf50';
                     document.querySelector('.balance-value').textContent = '$' + data.balance;
-                    alert(data.message);
+                    if (window.playBonusSound) window.playBonusSound();
                 }
+                modal.style.display = 'flex';
             })
             .catch(err => console.error(err));
         });
+
+        document.getElementById('bonus-close-btn').addEventListener('click', () => {
+            document.getElementById('bonus-modal').style.display = 'none';
+        });
     </script>
-    {% endif %}
 
-    <!-- Библиотека конфетти -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
-
     <script src="{{ url_for('static', filename='js/wheel.js') }}"></script>
 </body>
 </html>

@@ -398,6 +398,45 @@ body {
     color: #4caf50;
 }
 
+/* ===== КНОПКИ ВЫБОРА КОЛИЧЕСТВА ===== */
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+.qty-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qty-btn:hover {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+}
+.qty-value {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+    color: var(--gold);
+}
+.buy-btn {
+    width: 100%;
+    margin-top: 8px;
+}
+
 .btn {
     font-family: 'Orbitron', sans-serif;
     font-weight: 700;
@@ -674,6 +713,12 @@ body {
 .double-result {
     margin-top: 10px;
     font-weight: bold;
+}
+
+/* ===== БОНУС-МОДАЛКА ===== */
+.bonus-modal-content {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f);
+    border: 1px solid var(--gold);
 }
 
 /* ===== АВТОРИЗАЦИЯ ===== */

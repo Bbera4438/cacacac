@@ -21,8 +21,13 @@
             <span class="skin-rarity-text rarity-{{ skin.rarity }}">{{ skin.rarity.upper() }}</span>
             <div class="skin-footer">
                 <span class="skin-price">${{ skin.price }}</span>
-                <a href="{{ url_for('buy_skin', skin_id=skin.id) }}" class="btn btn-buy">КУПИТЬ</a>
+                <div class="quantity-controls">
+                    <button class="qty-btn qty-minus" data-skin-id="{{ skin.id }}">−</button>
+                    <span class="qty-value" id="qty-{{ skin.id }}">1</span>
+                    <button class="qty-btn qty-plus" data-skin-id="{{ skin.id }}">+</button>
+                </div>
             </div>
+            <button class="btn btn-buy buy-btn" data-skin-id="{{ skin.id }}" data-price="{{ skin.price }}">КУПИТЬ</button>
         </div>
     </div>
     {% endfor %}
@@ -31,4 +36,51 @@
 <div class="shop-tip">
     💡 Купленные скины появятся в инвентаре на странице <a href="{{ url_for('upgrade') }}" class="tip-link">Апгрейда</a>
 </div>
+
+<script>
+// Управление количеством
+document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const skinId = btn.dataset.skinId;
+        const qtySpan = document.getElementById('qty-' + skinId);
+        let qty = parseInt(qtySpan.textContent);
+        if (btn.classList.contains('qty-plus')) {
+            qty = Math.min(qty + 1, 10);
+        } else {
+            qty = Math.max(qty - 1, 1);
+        }
+        qtySpan.textContent = qty;
+    });
+});
+
+// Покупка с учётом количества
+document.querySelectorAll('.buy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const skinId = btn.dataset.skinId;
+        const price = parseInt(btn.dataset.price);
+        const qty = parseInt(document.getElementById('qty-' + skinId).textContent);
+
+        fetch('/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skin_id: skinId, quantity: qty })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                document.querySelector('.balance-value').textContent = '$' + data.balance;
+                location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ошибка покупки');
+        });
+    });
+});
+</script>
 {% endblock %}

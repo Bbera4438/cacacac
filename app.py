@@ -75,7 +75,7 @@ def get_current_user():
     return None, None
 
 # ======================== LIVE FEED ========================
-REAL_WINS = []  # в памяти (можно потерять при рестарте, но это не критично)
+REAL_WINS = []
 
 FAKE_NAMES = ['CyberSlayer', 'Xx_ProGamer_xX', 'AWP_Goddess', 'FadeMaster', 'RushB_no_stop',
               'ToxicKid', 'NitroBoost', 'EzKatka', 'SilverElite', 'GlobalNinja']
@@ -211,23 +211,42 @@ def index():
     shop = [get_skin(i) for i in SHOP_SKIN_IDS]
     return render_template('index.html', user=user, balance=user['balance'], shop_skins=shop, level=get_level(user))
 
-@app.route('/buy/<int:skin_id>')
-def buy_skin(skin_id):
+# НОВЫЙ МАРШРУТ ПОКУПКИ (POST, поддержка количества)
+@app.route('/buy', methods=['POST'])
+def buy_skin():
     uid, user = get_current_user()
     if not user:
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Не авторизован'}), 401
+    data = request.get_json()
+    skin_id = data.get('skin_id')
+    quantity = data.get('quantity', 1)
+    try:
+        skin_id = int(skin_id)
+        quantity = int(quantity)
+        if quantity < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Неверные параметры'}), 400
+
     skin = get_skin(skin_id)
     if not skin or skin_id not in SHOP_SKIN_IDS:
-        return redirect(url_for('index'))
-    if user['balance'] >= skin['price']:
-        user['balance'] -= skin['price']
+        return jsonify({'error': 'Скин не найден'}), 404
+
+    total_price = skin['price'] * quantity
+    if user['balance'] < total_price:
+        return jsonify({'error': 'Недостаточно средств'}), 400
+
+    user['balance'] -= total_price
+    for _ in range(quantity):
         user.setdefault('inventory', []).append(skin_id)
-        add_history(user, 'Покупка', skin['name'], -skin['price'])
-        add_xp(user, 10)
-        users = load_users()
-        users[uid] = user
-        save_users(users)
-    return redirect(url_for('index'))
+    add_history(user, 'Покупка', f'{skin["name"]} x{quantity}', -total_price)
+    add_xp(user, 10 * quantity)
+
+    users = load_users()
+    users[uid] = user
+    save_users(users)
+
+    return jsonify({'message': f'Куплено {quantity} шт. {skin["name"]} за ${total_price}', 'balance': user['balance']})
 
 # --- АПГРЕЙД ---
 @app.route('/upgrade')
@@ -299,7 +318,6 @@ def spin():
     if outcome_skin['name'] != 'Nothing':
         add_win_to_feed(user['nickname'], outcome_skin['name'], outcome_skin['price'], outcome_skin['image'])
 
-    # Сохраняем пользователя
     users = load_users()
     users[uid] = user
     save_users(users)
@@ -426,7 +444,6 @@ def update_profile():
     save_users(users)
     return jsonify({'status': 'ok'})
 
-# ======================== ЗАПУСК ========================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

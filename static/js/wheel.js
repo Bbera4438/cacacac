@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     const wrapper = document.getElementById('wheel-wrapper');
 
-    // Сектора
     const sectors = [
         { name: '★ Karambit\nDoppler',        color: '#ffd700', glow: '#fff3b0', id: 100 },
         { name: '★ Butterfly\nSlaughter',     color: '#ff6600', glow: '#ffaa33', id: 101 },
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window._spinning = false;
     let currentRotation = 0;
 
-    // Элементы интерфейса
     const spinButton = document.getElementById('spin-button');
     const selectedSkinText = document.getElementById('selected-skin-text');
     const resultModal = document.getElementById('result-modal');
@@ -35,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const doubleResult = document.getElementById('double-result');
     const modalCloseBtn = document.getElementById('modal-close-btn');
 
-    // Адаптивный размер канваса
     function resizeCanvas() {
         if (!wrapper) return;
         const size = Math.min(wrapper.clientWidth, 400);
@@ -45,9 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Первоначальная установка
+    resizeCanvas();
 
-    // Отрисовка колеса
     function drawWheel(rotation = 0) {
         const cx = canvas.width / 2;
         const cy = canvas.height / 2;
@@ -56,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Неоновое кольцо
         ctx.beginPath();
         ctx.arc(cx, cy, radius + 3, 0, 2 * Math.PI);
         ctx.strokeStyle = 'rgba(241, 196, 15, 0.4)';
@@ -97,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.restore();
         });
 
-        // Центр
         ctx.beginPath();
         ctx.arc(cx, cy, radius * 0.08, 0, 2 * Math.PI);
         const coinGrad = ctx.createRadialGradient(cx-2, cy-2, 1, cx, cy, radius*0.08);
@@ -116,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('GO', cx, cy);
     }
 
-    // Выбор слота
     document.querySelectorAll('.inventory-slot').forEach(slot => {
         slot.addEventListener('click', () => {
             if (window._spinning) return;
@@ -133,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Спин
     spinButton.addEventListener('click', () => {
         if (window._spinning || selectedIndex === null) return;
         window._spinning = true;
@@ -182,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Анимация к нужному сектору
     function animateWheelToSector(targetSectorIndex, callback) {
         const arcSize = (2 * Math.PI) / sectors.length;
         const pointerAngle = -Math.PI / 2;
