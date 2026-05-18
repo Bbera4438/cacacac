@@ -180,6 +180,31 @@ body {
     flex-wrap: wrap;
 }
 
+/* ===== Steam-аватар и ник в навбаре ===== */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.steam-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+}
+.profile-avatar-small {
+    font-size: 1.5rem;
+}
+.nav-nickname {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .level-badge {
     background: linear-gradient(135deg, #f1c40f, #e67e22);
     color: #000;
@@ -233,7 +258,7 @@ body {
     color: #000;
 }
 
-.btn-logout, .btn-login, .btn-register {
+.btn-logout, .btn-login, .btn-register, .btn-steam {
     font-family: 'Orbitron', sans-serif;
     font-weight: 700;
     font-size: 0.65rem;
@@ -274,6 +299,21 @@ body {
 
 .btn-register:hover {
     background: var(--gold-hover);
+}
+
+.btn-steam {
+    background: #171a21;
+    border: 1px solid #66c0f4;
+    color: #66c0f4;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-steam:hover {
+    background: #1b2838;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(102,192,244,0.5);
 }
 
 /* ===== ОСНОВНОЙ КОНТЕНТ ===== */
@@ -731,7 +771,7 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
-/* ===== DOUBLE OR NOTHING АНИМАЦИИ (общие для модалок) ===== */
+/* ===== DOUBLE OR NOTHING АНИМАЦИИ ===== */
 .double-animation-container {
     width: 120px;
     height: 120px;

@@ -11,6 +11,11 @@
         <input type="password" name="password" placeholder="Придумайте пароль" required>
         <button type="submit" class="btn btn-buy" style="width: 100%;">Зарегистрироваться</button>
     </form>
+    <div style="margin-top: 15px;">
+        <a href="{{ url_for('steam_login') }}" class="btn btn-steam" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
+            <img src="{{ url_for('static', filename='images/steam-icon.png') }}" alt="Steam" style="height: 18px;"> Войти через Steam
+        </a>
+    </div>
     <p class="auth-link">Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a></p>
 </div>
 {% endblock %}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CS:GO Upgrader{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=10">
 </head>
 <body>
     <canvas id="particles-canvas"></canvas>
@@ -32,6 +32,14 @@
             </div>
             <div class="nav-right">
                 {% if user %}
+                <div class="user-info">
+                    {% if user.avatar and user.avatar.startswith('http') %}
+                    <img src="{{ user.avatar }}" alt="Avatar" class="steam-avatar">
+                    {% else %}
+                    <span class="profile-avatar-small">{{ user.avatar or '👤' }}</span>
+                    {% endif %}
+                    <span class="nav-nickname">{{ user.nickname }}</span>
+                </div>
                 <div class="level-badge" title="Уровень">🎖️ {{ level }}</div>
                 <div class="balance-block">
                     <span class="balance-label">Баланс</span>
@@ -40,6 +48,9 @@
                 <button id="daily-bonus-btn" class="btn btn-bonus" title="Ежедневный бонус">🎁</button>
                 <a href="{{ url_for('logout') }}" class="btn btn-logout">Выйти</a>
                 {% else %}
+                <a href="{{ url_for('steam_login') }}" class="btn btn-steam">
+                    <img src="{{ url_for('static', filename='images/steam-icon.png') }}" alt="Steam" style="height: 18px; vertical-align: middle; margin-right: 6px;"> Войти через Steam
+                </a>
                 <a href="{{ url_for('login') }}" class="btn btn-login">Войти</a>
                 <a href="{{ url_for('register') }}" class="btn btn-register">Регистрация</a>
                 {% endif %}
@@ -64,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Универсальное модальное окно Double (для использования из профиля и других мест) -->
+    <!-- Универсальное модальное окно Double -->
     <div class="modal-overlay" id="global-double-modal" style="display: none;">
         <div class="modal-content">
             <h2 class="modal-title">DOUBLE OR NOTHING</h2>

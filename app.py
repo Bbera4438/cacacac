@@ -2,6 +2,8 @@ import os
 import json
 import random
 import hashlib
+import urllib.parse
+import requests
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
@@ -74,9 +76,71 @@ def get_current_user():
             return uid, users[uid]
     return None, None
 
+# ======================== STEAM АВТОРИЗАЦИЯ ========================
+STEAM_API_KEY = os.environ.get('STEAM_API_KEY', '')  # Укажите ключ на сервере!
+
+def get_steam_profile(steamid):
+    """Возвращает словарь с nickname и avatar_url."""
+    if not STEAM_API_KEY:
+        return {'nickname': f'SteamUser_{steamid}', 'avatar': 'https://via.placeholder.com/64'}
+    url = 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/'
+    params = {'key': STEAM_API_KEY, 'steamids': steamid}
+    try:
+        resp = requests.get(url, params=params, timeout=5)
+        data = resp.json()
+        players = data.get('response', {}).get('players', [])
+        if players:
+            player = players[0]
+            return {
+                'nickname': player.get('personaname', f'SteamUser_{steamid}'),
+                'avatar': player.get('avatar', 'https://via.placeholder.com/64')
+            }
+    except Exception as e:
+        print('Steam API error:', e)
+    return {'nickname': f'SteamUser_{steamid}', 'avatar': 'https://via.placeholder.com/64'}
+
+def steam_openid_url(return_to):
+    """Генерирует URL для перенаправления на Steam."""
+    params = {
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': return_to,
+        'openid.realm': request.host_url.rstrip('/'),
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+    }
+    query = urllib.parse.urlencode(params)
+    return 'https://steamcommunity.com/openid/login?' + query
+
+def verify_steam_auth(params):
+    """Проверяет подпись OpenID, возвращает steamid или None."""
+    if params.get('openid.mode') != 'id_res':
+        return None
+    check_params = {
+        'openid.mode': 'check_authentication',
+        'openid.assoc_handle': params.get('openid.assoc_handle'),
+        'openid.signed': params.get('openid.signed'),
+        'openid.sig': params.get('openid.sig'),
+        'openid.ns': 'http://specs.openid.net/auth/2.0'
+    }
+    signed_fields = params.get('openid.signed', '').split(',')
+    for field in signed_fields:
+        key = 'openid.' + field
+        if key in params:
+            check_params['openid.' + field] = params[key]
+    try:
+        resp = requests.post('https://steamcommunity.com/openid/login', data=check_params, timeout=10)
+        if 'is_valid:true' in resp.text:
+            claimed_id = params.get('openid.claimed_id', '')
+            steamid = claimed_id.rstrip('/').split('/')[-1]
+            if steamid.isdigit():
+                return steamid
+    except Exception as e:
+        print('Steam auth verification error:', e)
+    return None
+
 # ======================== LIVE FEED ========================
 REAL_WINS = []
-
 FAKE_NAMES = ['CyberSlayer', 'Xx_ProGamer_xX', 'AWP_Goddess', 'FadeMaster', 'RushB_no_stop',
               'ToxicKid', 'NitroBoost', 'EzKatka', 'SilverElite', 'GlobalNinja']
 
@@ -153,7 +217,55 @@ def calculate_odds(bet_price):
 def make_session_permanent():
     session.permanent = True
 
-# --- АВТОРИЗАЦИЯ ---
+# Steam вход
+@app.route('/steam_login')
+def steam_login():
+    return_to = url_for('steam_callback', _external=True)
+    return redirect(steam_openid_url(return_to))
+
+@app.route('/steam_callback')
+def steam_callback():
+    steamid = verify_steam_auth(request.args)
+    if not steamid:
+        return 'Ошибка входа через Steam', 400
+
+    profile = get_steam_profile(steamid)
+    nickname = profile['nickname']
+    avatar_url = profile['avatar']
+
+    users = load_users()
+    uid = None
+    for u_id, u_data in users.items():
+        if u_data.get('steamid') == steamid:
+            uid = u_id
+            u_data['nickname'] = nickname
+            if avatar_url:
+                u_data['avatar'] = avatar_url
+            break
+    if not uid:
+        uid = str(len(users) + 1)
+        users[uid] = {
+            'steamid': steamid,
+            'login': f'steam_{steamid}',
+            'password': '',
+            'salt': '',
+            'balance': 1000,
+            'inventory': [],
+            'xp': 0,
+            'history': [],
+            'last_bonus': '2000-01-01T00:00:00',
+            'avatar': avatar_url if avatar_url else 'default',
+            'nickname': nickname
+        }
+    else:
+        if avatar_url:
+            users[uid]['avatar'] = avatar_url
+        users[uid]['nickname'] = nickname
+    save_users(users)
+    session['user_id'] = uid
+    return redirect(url_for('index'))
+
+# Обычный вход
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -161,9 +273,10 @@ def login():
         password = request.form.get('password', '')
         users = load_users()
         for uid, user in users.items():
-            if user['login'] == login and hashlib.sha256((password + user['salt']).encode()).hexdigest() == user['password']:
-                session['user_id'] = uid
-                return redirect(url_for('index'))
+            if user.get('login') == login and 'salt' in user and user['salt']:
+                if hashlib.sha256((password + user['salt']).encode()).hexdigest() == user['password']:
+                    session['user_id'] = uid
+                    return redirect(url_for('index'))
         return render_template('login.html', error='Неверный логин или пароль')
     return render_template('login.html')
 
@@ -175,7 +288,7 @@ def register():
         if not login or not password:
             return render_template('register.html', error='Заполните все поля')
         users = load_users()
-        if any(u['login'] == login for u in users.values()):
+        if any(u.get('login') == login for u in users.values()):
             return render_template('register.html', error='Пользователь уже существует')
         uid = str(len(users) + 1)
         salt = os.urandom(4).hex()
@@ -202,21 +315,19 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-# --- ГЛАВНАЯ (МАГАЗИН) ---
+# Главная (магазин)
 @app.route('/')
 def index():
     uid, user = get_current_user()
     if not user:
         return redirect(url_for('login'))
     shop = [get_skin(i) for i in SHOP_SKIN_IDS]
-    # Статистика сайта (из users.json)
     users = load_users()
     total_users = len(users)
     total_spins = sum(len(u.get('history', [])) for u in users.values())
     return render_template('index.html', user=user, balance=user['balance'], shop_skins=shop,
                            level=get_level(user), total_users=total_users, total_spins=total_spins)
 
-# ПОКУПКА (POST, поддержка количества)
 @app.route('/buy', methods=['POST'])
 def buy_skin():
     uid, user = get_current_user()
@@ -253,7 +364,6 @@ def buy_skin():
 
     return jsonify({'message': f'Куплено {quantity} шт. {skin["name"]} за ${total_price}', 'balance': user['balance']})
 
-# --- АПГРЕЙД ---
 @app.route('/upgrade')
 def upgrade():
     uid, user = get_current_user()
@@ -357,9 +467,7 @@ def double_or_nothing():
     win = random.random() < 0.5
     if win:
         doubled_value = skin['price'] * 2
-        # Подбираем скины из базы (не Nothing) для начисления
         available_skins = [s for s in SKINS_DB.values() if s['id'] != 200 and s['price'] <= doubled_value]
-        # Сортируем по убыванию цены, чтобы выдавать наиболее дорогие
         available_skins.sort(key=lambda x: x['price'], reverse=True)
         skins_to_give = []
         remaining = doubled_value
@@ -369,16 +477,13 @@ def double_or_nothing():
                 remaining -= s['price']
             if remaining <= 0:
                 break
-        # Если не набрали ни одного скина (слишком маленькая ставка), просто кладём деньги
         if not skins_to_give:
             user['balance'] += doubled_value
             msg = f'Вы удвоили! +${doubled_value} на баланс'
             add_history(user, 'Double Win (баланс)', skin['name'], doubled_value)
         else:
-            # Добавляем скины в инвентарь
             for s in skins_to_give:
                 inv.append(s['id'])
-            # Остаток на баланс
             if remaining > 0:
                 user['balance'] += remaining
             names = ', '.join([s['name'] for s in skins_to_give])
@@ -475,7 +580,6 @@ def update_profile():
     save_users(users)
     return jsonify({'status': 'ok'})
 
-# ======================== ЗАПУСК ========================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
