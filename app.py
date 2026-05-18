@@ -1,6 +1,7 @@
 import random
 import hashlib
 import secrets
+import os
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
@@ -418,4 +419,6 @@ def update_profile():
     return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Используй переменную окружения PORT (Render сам её выдаст)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
