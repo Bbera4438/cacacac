@@ -10,52 +10,77 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 app = Flask(__name__)
 app.secret_key = 'frutiger-aero-upgrader-2024-secure'
 
-# ======================== БАЗА ДАННЫХ СКИНОВ ========================
-SKINS_DB = {
-    1: {'id': 1, 'name': 'AK-47 | Redline', 'price': 50,
-        'image': 'skins/ak47_redline.png', 'rarity': 'classified'},
-    2: {'id': 2, 'name': 'AWP | Dragon Lore', 'price': 300,
-        'image': 'skins/awp_dragon_lore.png', 'rarity': 'covert'},
-    3: {'id': 3, 'name': 'M4A4 | Howl', 'price': 250,
-        'image': 'skins/m4a4_howl.png', 'rarity': 'covert'},
-    4: {'id': 4, 'name': 'Desert Eagle | Blaze', 'price': 150,
-        'image': 'skins/deagle_blaze.png', 'rarity': 'classified'},
-    5: {'id': 5, 'name': 'USP-S | Orion', 'price': 40,
-        'image': 'skins/usps_orion.png', 'rarity': 'restricted'},
-    6: {'id': 6, 'name': 'Glock-18 | Fade', 'price': 120,
-        'image': 'skins/glock_fade.png', 'rarity': 'classified'},
-    7: {'id': 7, 'name': 'SSG 08 | Blood in the Water', 'price': 80,
-        'image': 'skins/ssg08_blood.png', 'rarity': 'restricted'},
-    8: {'id': 8, 'name': 'P250 | Sand Dune', 'price': 1,
-        'image': 'skins/p250_sand.png', 'rarity': 'consumer'},
+# ======================== БАЗА ДАННЫХ СКИНОВ (с износами) ========================
+# Базовые цены (Field-Tested), имена и изображения
+_BASE_SKINS = [
+    {'base_id': 1, 'base_name': 'AK-47 | Redline', 'base_price': 50, 'image': 'skins/ak47_redline.png', 'rarity': 'classified'},
+    {'base_id': 2, 'base_name': 'AWP | Dragon Lore', 'base_price': 300, 'image': 'skins/awp_dragon_lore.png', 'rarity': 'covert'},
+    {'base_id': 3, 'base_name': 'M4A4 | Howl', 'base_price': 250, 'image': 'skins/m4a4_howl.png', 'rarity': 'covert'},
+    {'base_id': 4, 'base_name': 'Desert Eagle | Blaze', 'base_price': 150, 'image': 'skins/deagle_blaze.png', 'rarity': 'classified'},
+    {'base_id': 5, 'base_name': 'USP-S | Orion', 'base_price': 40, 'image': 'skins/usps_orion.png', 'rarity': 'restricted'},
+    {'base_id': 6, 'base_name': 'Glock-18 | Fade', 'base_price': 120, 'image': 'skins/glock_fade.png', 'rarity': 'classified'},
+    {'base_id': 7, 'base_name': 'SSG 08 | Blood in the Water', 'base_price': 80, 'image': 'skins/ssg08_blood.png', 'rarity': 'restricted'},
+    {'base_id': 8, 'base_name': 'P250 | Sand Dune', 'base_price': 1, 'image': 'skins/p250_sand.png', 'rarity': 'consumer'},
+]
 
-    100: {'id': 100, 'name': '★ Karambit | Doppler', 'price': 1500,
-          'image': 'skins/karambit_doppler.png', 'rarity': 'rare_special', 'chance': 1},
-    101: {'id': 101, 'name': '★ Butterfly Knife | Slaughter', 'price': 1200,
-          'image': 'skins/butterfly_slaughter.png', 'rarity': 'rare_special', 'chance': 2},
-    102: {'id': 102, 'name': 'M4A1-S | Knight', 'price': 600,
-          'image': 'skins/m4a1s_knight.png', 'rarity': 'covert', 'chance': 4},
-    103: {'id': 103, 'name': 'AWP | Medusa', 'price': 500,
-          'image': 'skins/awp_medusa.png', 'rarity': 'covert', 'chance': 5},
-    104: {'id': 104, 'name': 'AK-47 | Fire Serpent', 'price': 400,
-          'image': 'skins/ak47_fire_serpent.png', 'rarity': 'classified', 'chance': 6},
-    105: {'id': 105, 'name': 'USP-S | Kill Confirmed', 'price': 350,
-          'image': 'skins/usps_kill_confirmed.png', 'rarity': 'classified', 'chance': 7},
-    106: {'id': 106, 'name': 'Glock-18 | Dragon Tattoo', 'price': 200,
-          'image': 'skins/glock_dragon_tattoo.png', 'rarity': 'restricted', 'chance': 10},
-    107: {'id': 107, 'name': 'Desert Eagle | Cobalt Disruption', 'price': 100,
-          'image': 'skins/deagle_cobalt.png', 'rarity': 'restricted', 'chance': 15},
-    200: {'id': 200, 'name': 'Nothing', 'price': 0,
-          'image': 'skins/nothing.png', 'rarity': 'none', 'chance': 50}
+# Износы и множители цены
+WEARS = {
+    'FN': {'name_suffix': '(FN)', 'price_mult': 1.3},
+    'MW': {'name_suffix': '(MW)', 'price_mult': 1.1},
+    'FT': {'name_suffix': '(FT)', 'price_mult': 1.0},
+    'WW': {'name_suffix': '(WW)', 'price_mult': 0.8},
+    'BS': {'name_suffix': '(BS)', 'price_mult': 0.6},
 }
 
-SHOP_SKIN_IDS = [1, 2, 3, 4, 5, 6, 7, 8]
-UPGRADE_OUTCOMES_BASE = {100: 1, 101: 2, 102: 4, 103: 5, 104: 6, 105: 7, 106: 10, 107: 15, 200: 50}
+SKINS_DB = {}
+SHOP_SKIN_IDS = []
+new_id = 1
+
+for base in _BASE_SKINS:
+    for wear_key, wear_data in WEARS.items():
+        sid = new_id
+        name = base['base_name'] + ' ' + wear_data['name_suffix']
+        price = max(1, int(base['base_price'] * wear_data['price_mult']))
+        rarity = base['rarity']
+        SKINS_DB[sid] = {
+            'id': sid,
+            'name': name,
+            'price': price,
+            'image': base['image'],
+            'rarity': rarity,
+            'wear': wear_key,
+        }
+        SHOP_SKIN_IDS.append(sid)
+        new_id += 1
+
+# Исходы апгрейда (старые, без износов)
+_UPGRADE_SKINS = [
+    (100, '★ Karambit | Doppler', 1500, 'skins/karambit_doppler.png', 'rare_special', 1),
+    (101, '★ Butterfly Knife | Slaughter', 1200, 'skins/butterfly_slaughter.png', 'rare_special', 2),
+    (102, 'M4A1-S | Knight', 600, 'skins/m4a1s_knight.png', 'covert', 4),
+    (103, 'AWP | Medusa', 500, 'skins/awp_medusa.png', 'covert', 5),
+    (104, 'AK-47 | Fire Serpent', 400, 'skins/ak47_fire_serpent.png', 'classified', 6),
+    (105, 'USP-S | Kill Confirmed', 350, 'skins/usps_kill_confirmed.png', 'classified', 7),
+    (106, 'Glock-18 | Dragon Tattoo', 200, 'skins/glock_dragon_tattoo.png', 'restricted', 10),
+    (107, 'Desert Eagle | Cobalt Disruption', 100, 'skins/deagle_cobalt.png', 'restricted', 15),
+]
+for sid, name, price, img, rarity, chance in _UPGRADE_SKINS:
+    SKINS_DB[sid] = {
+        'id': sid, 'name': name, 'price': price, 'image': img,
+        'rarity': rarity, 'chance': chance
+    }
+# Nothing
+SKINS_DB[200] = {
+    'id': 200, 'name': 'Nothing', 'price': 0,
+    'image': 'skins/nothing.png', 'rarity': 'none', 'chance': 50
+}
+
+UPGRADE_OUTCOMES_BASE = {k: v['chance'] for k, v in SKINS_DB.items() if k >= 100}
 
 def get_skin(id):
     return SKINS_DB.get(id)
 
-# ======================== ХРАНЕНИЕ ПОЛЬЗОВАТЕЛЕЙ В JSON ========================
+# ======================== ХРАНЕНИЕ ПОЛЬЗОВАТЕЛЕЙ ========================
 USERS_FILE = 'users.json'
 
 def load_users():
@@ -77,10 +102,9 @@ def get_current_user():
     return None, None
 
 # ======================== STEAM АВТОРИЗАЦИЯ ========================
-STEAM_API_KEY = os.environ.get('STEAM_API_KEY', '')  # Укажите ключ на сервере!
+STEAM_API_KEY = os.environ.get('STEAM_API_KEY', '')
 
 def get_steam_profile(steamid):
-    """Возвращает словарь с nickname и avatar_url."""
     if not STEAM_API_KEY:
         return {'nickname': f'SteamUser_{steamid}', 'avatar': 'https://via.placeholder.com/64'}
     url = 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/'
@@ -100,7 +124,6 @@ def get_steam_profile(steamid):
     return {'nickname': f'SteamUser_{steamid}', 'avatar': 'https://via.placeholder.com/64'}
 
 def steam_openid_url(return_to):
-    """Генерирует URL для перенаправления на Steam."""
     params = {
         'openid.ns': 'http://specs.openid.net/auth/2.0',
         'openid.mode': 'checkid_setup',
@@ -113,7 +136,6 @@ def steam_openid_url(return_to):
     return 'https://steamcommunity.com/openid/login?' + query
 
 def verify_steam_auth(params):
-    """Проверяет подпись OpenID, возвращает steamid или None."""
     if params.get('openid.mode') != 'id_res':
         return None
     check_params = {
@@ -228,11 +250,9 @@ def steam_callback():
     steamid = verify_steam_auth(request.args)
     if not steamid:
         return 'Ошибка входа через Steam', 400
-
     profile = get_steam_profile(steamid)
     nickname = profile['nickname']
     avatar_url = profile['avatar']
-
     users = load_users()
     uid = None
     for u_id, u_data in users.items():
@@ -315,7 +335,7 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-# Главная (магазин)
+# Главная (магазин) – теперь с сортировкой и фильтром на клиенте, сервер отдаёт весь список
 @app.route('/')
 def index():
     uid, user = get_current_user()
@@ -343,27 +363,23 @@ def buy_skin():
             raise ValueError
     except (ValueError, TypeError):
         return jsonify({'error': 'Неверные параметры'}), 400
-
     skin = get_skin(skin_id)
     if not skin or skin_id not in SHOP_SKIN_IDS:
         return jsonify({'error': 'Скин не найден'}), 404
-
     total_price = skin['price'] * quantity
     if user['balance'] < total_price:
         return jsonify({'error': 'Недостаточно средств'}), 400
-
     user['balance'] -= total_price
     for _ in range(quantity):
         user.setdefault('inventory', []).append(skin_id)
     add_history(user, 'Покупка', f'{skin["name"]} x{quantity}', -total_price)
     add_xp(user, 10 * quantity)
-
     users = load_users()
     users[uid] = user
     save_users(users)
-
     return jsonify({'message': f'Куплено {quantity} шт. {skin["name"]} за ${total_price}', 'balance': user['balance']})
 
+# Апгрейд (старая версия без кастомизации)
 @app.route('/upgrade')
 def upgrade():
     uid, user = get_current_user()
@@ -464,6 +480,9 @@ def double_or_nothing():
     if not skin:
         return jsonify({'error': 'Неизвестный скин'}), 400
 
+    # Исправление: ставка удаляется в любом случае
+    inv.remove(skin_id)
+
     win = random.random() < 0.5
     if win:
         doubled_value = skin['price'] * 2
@@ -494,7 +513,6 @@ def double_or_nothing():
         add_xp(user, 30)
         add_win_to_feed(user['nickname'], skin['name'] + ' (Double)', doubled_value, skin['image'])
     else:
-        inv.remove(skin_id)
         msg = 'Вы проиграли скин :('
         add_history(user, 'Double Lose', skin['name'], -skin['price'])
         add_xp(user, 5)

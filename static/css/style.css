@@ -1006,6 +1006,69 @@ body {
     flex-wrap: wrap;
 }
 
+/* ===== ПАНЕЛЬ УПРАВЛЕНИЯ МАГАЗИНОМ (СОРТИРОВКА + ФИЛЬТР) ===== */
+.shop-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.sort-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.sort-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sort-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+.sort-btn.active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+    box-shadow: 0 0 8px rgba(241,196,15,0.4);
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#price-filter {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    width: 140px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#price-filter:focus {
+    border-color: var(--gold);
+}
 /* ===== КНОПКА DOUBLE В ПРОФИЛЕ ===== */
 .btn-double-profile {
     background: linear-gradient(135deg, #f39c12, #e67e22);

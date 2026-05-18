@@ -25,9 +25,20 @@
     </div>
 </div>
 
-<div class="skins-grid">
+<!-- Панель управления: сортировка и фильтр -->
+<div class="shop-controls">
+    <div class="sort-buttons">
+        <button class="btn sort-btn active" data-sort="asc">⬆️ По возрастанию цены</button>
+        <button class="btn sort-btn" data-sort="desc">⬇️ По убыванию цены</button>
+    </div>
+    <div class="filter-group">
+        <input type="number" id="price-filter" placeholder="Макс. цена ($)" min="0" style="padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; width: 140px;">
+    </div>
+</div>
+
+<div class="skins-grid" id="skins-container">
     {% for skin in shop_skins %}
-    <div class="skin-card" data-rarity="{{ skin.rarity }}">
+    <div class="skin-card" data-rarity="{{ skin.rarity }}" data-price="{{ skin.price }}" data-name="{{ skin.name }}">
         <div class="skin-image">
             <img src="{{ url_for('static', filename='images/' + skin.image) }}"
                  alt="{{ skin.name }}"
@@ -56,7 +67,7 @@
     💡 Купленные скины появятся в инвентаре на странице <a href="{{ url_for('upgrade') }}" class="tip-link">Апгрейда</a>
 </div>
 
-<!-- Модальное окно покупки (анимация) -->
+<!-- Модальное окно покупки -->
 <div class="modal-overlay" id="purchase-modal" style="display: none;">
     <div class="modal-content">
         <h2 class="modal-title">🛍️ ПОКУПКА</h2>
@@ -83,7 +94,7 @@ document.querySelectorAll('.qty-btn').forEach(btn => {
     });
 });
 
-// Покупка с модальным окном и анимацией
+// Покупка с модальным окном
 document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const skinId = btn.dataset.skinId;
@@ -126,5 +137,42 @@ document.getElementById('purchase-close-btn').addEventListener('click', () => {
     document.getElementById('purchase-modal').style.display = 'none';
     location.reload();
 });
+
+// ========== СОРТИРОВКА И ФИЛЬТРАЦИЯ ==========
+const skinsContainer = document.getElementById('skins-container');
+const sortButtons = document.querySelectorAll('.sort-btn');
+const priceFilter = document.getElementById('price-filter');
+
+let currentSort = 'asc'; // по умолчанию возрастание
+
+function sortAndFilter() {
+    const cards = Array.from(skinsContainer.querySelectorAll('.skin-card'));
+    const maxPrice = parseInt(priceFilter.value) || Infinity;
+
+    // Сортировка
+    cards.sort((a, b) => {
+        const priceA = parseInt(a.dataset.price);
+        const priceB = parseInt(b.dataset.price);
+        return currentSort === 'asc' ? priceA - priceB : priceB - priceA;
+    });
+
+    // Фильтрация и отображение
+    cards.forEach(card => {
+        const price = parseInt(card.dataset.price);
+        card.style.display = price <= maxPrice ? '' : 'none';
+        skinsContainer.appendChild(card); // перестроение порядка
+    });
+}
+
+sortButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        sortButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSort = btn.dataset.sort;
+        sortAndFilter();
+    });
+});
+
+priceFilter.addEventListener('input', sortAndFilter);
 </script>
 {% endblock %}

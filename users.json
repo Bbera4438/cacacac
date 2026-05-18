@@ -1,0 +1,265 @@
+{
+  "1": {
+    "login": "уцйуйу",
+    "password": "53f55799b39afb8827c37eea959f7fe9610012de2415577569fd741a138454c3",
+    "salt": "d439a140",
+    "balance": 352,
+    "inventory": [
+      101
+    ],
+    "xp": 740,
+    "history": [
+      {
+        "action": "Double Lose",
+        "item": "Glock-18 | Dragon Tattoo",
+        "amount": -200,
+        "time": "13:51:46"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl (WW) → Glock-18 | Dragon Tattoo",
+        "amount": 0,
+        "time": "13:51:37"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Desert Eagle | Cobalt Disruption → M4A4 | Howl (WW)",
+        "amount": 200,
+        "time": "13:51:33"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl (WW) → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "13:51:24"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Desert Eagle | Cobalt Disruption → M4A4 | Howl (WW)",
+        "amount": 200,
+        "time": "13:51:15"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "Desert Eagle | Cobalt Disruption → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "13:51:07"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "AK-47 | Fire Serpent → Nothing",
+        "amount": 0,
+        "time": "13:50:52"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A1-S | Knight → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "13:50:43"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "M4A1-S | Knight → ★ Butterfly Knife | Slaughter",
+        "amount": 1200,
+        "time": "13:50:38"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "Glock-18 | Dragon Tattoo → M4A1-S | Knight",
+        "amount": 0,
+        "time": "13:50:29"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Glock-18 | Dragon Tattoo → AK-47 | Fire Serpent",
+        "amount": 400,
+        "time": "13:50:25"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "Glock-18 | Dragon Tattoo → Glock-18 | Dragon Tattoo",
+        "amount": 0,
+        "time": "13:50:16"
+      },
+      {
+        "action": "Double Lose",
+        "item": "M4A1-S | Knight",
+        "amount": -600,
+        "time": "13:50:12"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "AK-47 | Fire Serpent → M4A1-S | Knight",
+        "amount": 0,
+        "time": "13:50:03"
+      },
+      {
+        "action": "Double Lose",
+        "item": "AK-47 | Fire Serpent",
+        "amount": -400,
+        "time": "13:49:59"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl (WW) → AK-47 | Fire Serpent",
+        "amount": 0,
+        "time": "13:49:49"
+      },
+      {
+        "action": "Продажа",
+        "item": "AWP | Medusa",
+        "amount": 350,
+        "time": "13:49:41"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Desert Eagle | Cobalt Disruption → M4A4 | Howl (WW)",
+        "amount": 200,
+        "time": "13:49:26"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "AK-47 | Fire Serpent → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "13:49:16"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "USP-S | Orion (FN) → Nothing",
+        "amount": 0,
+        "time": "13:49:09"
+      },
+      {
+        "action": "Покупка",
+        "item": "USP-S | Orion (FN) x1",
+        "amount": -52,
+        "time": "13:49:02"
+      },
+      {
+        "action": "Ежедневный бонус",
+        "item": "",
+        "amount": 54,
+        "time": "09:39:52"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "AK-47 | Fire Serpent → M4A1-S | Knight, Glock-18 | Dragon Tattoo",
+        "amount": 800,
+        "time": "09:39:25"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl → AK-47 | Fire Serpent",
+        "amount": 0,
+        "time": "09:39:14"
+      },
+      {
+        "action": "Double Lose",
+        "item": "Glock-18 | Dragon Tattoo",
+        "amount": -200,
+        "time": "09:39:11"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "Glock-18 | Dragon Tattoo → Glock-18 | Dragon Tattoo",
+        "amount": 0,
+        "time": "09:39:02"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Glock-18 | Dragon Tattoo → AK-47 | Fire Serpent",
+        "amount": 400,
+        "time": "09:38:53"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "AK-47 | Fire Serpent → Glock-18 | Dragon Tattoo",
+        "amount": 0,
+        "time": "09:38:44"
+      },
+      {
+        "action": "Double Win (скины)",
+        "item": "Glock-18 | Dragon Tattoo → AK-47 | Fire Serpent",
+        "amount": 400,
+        "time": "09:38:34"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "AWP | Medusa → Glock-18 | Dragon Tattoo",
+        "amount": 0,
+        "time": "09:38:24"
+      }
+    ],
+    "last_bonus": "2026-05-18T09:39:52.975723",
+    "avatar": "default",
+    "nickname": "уцйуйу"
+  },
+  "2": {
+    "steamid": "76561198972861522",
+    "login": "steam_76561198972861522",
+    "password": "",
+    "salt": "",
+    "balance": 0,
+    "inventory": [],
+    "xp": 135,
+    "history": [
+      {
+        "action": "Double Lose",
+        "item": "Desert Eagle | Cobalt Disruption",
+        "amount": -100,
+        "time": "13:00:28"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "13:00:19"
+      },
+      {
+        "action": "Покупка",
+        "item": "M4A4 | Howl x1",
+        "amount": -250,
+        "time": "12:58:56"
+      },
+      {
+        "action": "Double Lose",
+        "item": "AWP | Dragon Lore",
+        "amount": -300,
+        "time": "12:56:07"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl → AWP | Dragon Lore",
+        "amount": 0,
+        "time": "12:55:57"
+      },
+      {
+        "action": "Double Lose",
+        "item": "Desert Eagle | Cobalt Disruption",
+        "amount": -100,
+        "time": "12:55:49"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl → Desert Eagle | Cobalt Disruption",
+        "amount": 0,
+        "time": "12:55:39"
+      },
+      {
+        "action": "Апгрейд",
+        "item": "M4A4 | Howl → Nothing",
+        "amount": 0,
+        "time": "12:55:10"
+      },
+      {
+        "action": "Покупка",
+        "item": "M4A4 | Howl x3",
+        "amount": -750,
+        "time": "12:54:48"
+      }
+    ],
+    "last_bonus": "2000-01-01T00:00:00",
+    "avatar": "https://via.placeholder.com/64",
+    "nickname": "SteamUser_76561198972861522"
+  }
+}
