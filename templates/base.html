@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CS:GO Upgrader{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9">
 </head>
 <body>
     <canvas id="particles-canvas"></canvas>
@@ -61,6 +61,18 @@
             <h2 class="modal-title">🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
             <p id="bonus-message"></p>
             <button class="btn btn-buy" id="bonus-close-btn">ЗАБРАТЬ</button>
+        </div>
+    </div>
+
+    <!-- Универсальное модальное окно Double (для использования из профиля и других мест) -->
+    <div class="modal-overlay" id="global-double-modal" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title">DOUBLE OR NOTHING</h2>
+            <div class="double-animation-container" id="global-double-anim">
+                <div class="coin">💰</div>
+            </div>
+            <div id="global-double-result" class="double-result"></div>
+            <button class="btn btn-buy" id="global-double-close-btn" style="margin-top: 20px;">ЗАКРЫТЬ</button>
         </div>
     </div>
 
@@ -135,10 +147,9 @@
                 setTimeout(() => playNoise(0.4), 100);
             };
 
-            // Новый звук напряжения для Double (сердцебиение + высокий тон)
             window.playDoubleSound = () => {
                 const now = audioCtx.currentTime;
-                const beats = 10; // число ударов
+                const beats = 10;
                 for (let i = 0; i < beats; i++) {
                     const time = now + i * 0.4;
                     const osc = audioCtx.createOscillator();
@@ -165,7 +176,6 @@
                 osc2.stop(now + beats * 0.4 + 0.3);
             };
 
-            // Звук победы в Double
             window.playDoubleWin = () => {
                 [523, 659, 784, 1047].forEach((freq, i) => {
                     playTone(freq, 0.15, 'square', 0.25);
@@ -173,7 +183,6 @@
                 setTimeout(() => playTone(1047, 0.5, 'sine', 0.4), 300);
             };
 
-            // Звук проигрыша в Double
             window.playDoubleLose = () => {
                 playTone(200, 0.5, 'sawtooth', 0.2);
                 setTimeout(() => playNoise(0.6), 200);
@@ -187,6 +196,12 @@
                 [440, 554, 660].forEach((freq, i) => {
                     playTone(freq, 0.15, 'sine', 0.2);
                 });
+            };
+
+            window.playPurchaseSound = () => {
+                playTone(523, 0.1, 'sine', 0.2);
+                setTimeout(() => playTone(659, 0.1, 'sine', 0.2), 100);
+                setTimeout(() => playTone(784, 0.15, 'sine', 0.25), 200);
             };
         })();
     </script>
@@ -294,6 +309,37 @@
         document.getElementById('bonus-close-btn').addEventListener('click', () => {
             document.getElementById('bonus-modal').style.display = 'none';
         });
+    </script>
+
+    <!-- Глобальная функция конфетти -->
+    <script>
+        window.launchConfetti = function() {
+            if (typeof confetti !== 'function') return;
+            const duration = 2000;
+            const end = Date.now() + duration;
+            const colors = ['#f1c40f', '#e67e22', '#ffffff', '#e84393', '#4caf50'];
+
+            (function frame() {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.6 },
+                    colors: colors
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.6 },
+                    colors: colors
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        };
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>

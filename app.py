@@ -209,9 +209,14 @@ def index():
     if not user:
         return redirect(url_for('login'))
     shop = [get_skin(i) for i in SHOP_SKIN_IDS]
-    return render_template('index.html', user=user, balance=user['balance'], shop_skins=shop, level=get_level(user))
+    # Статистика сайта (из users.json)
+    users = load_users()
+    total_users = len(users)
+    total_spins = sum(len(u.get('history', [])) for u in users.values())
+    return render_template('index.html', user=user, balance=user['balance'], shop_skins=shop,
+                           level=get_level(user), total_users=total_users, total_spins=total_spins)
 
-# НОВЫЙ МАРШРУТ ПОКУПКИ (POST, поддержка количества)
+# ПОКУПКА (POST, поддержка количества)
 @app.route('/buy', methods=['POST'])
 def buy_skin():
     uid, user = get_current_user()
@@ -351,12 +356,38 @@ def double_or_nothing():
 
     win = random.random() < 0.5
     if win:
-        user['balance'] += skin['price'] * 2
-        inv.remove(skin_id)
-        msg = f'Вы удвоили! +${skin["price"]*2}'
-        add_history(user, 'Double Win', skin['name'], skin['price']*2)
+        doubled_value = skin['price'] * 2
+        # Подбираем скины из базы (не Nothing) для начисления
+        available_skins = [s for s in SKINS_DB.values() if s['id'] != 200 and s['price'] <= doubled_value]
+        # Сортируем по убыванию цены, чтобы выдавать наиболее дорогие
+        available_skins.sort(key=lambda x: x['price'], reverse=True)
+        skins_to_give = []
+        remaining = doubled_value
+        for s in available_skins:
+            if s['price'] <= remaining:
+                skins_to_give.append(s)
+                remaining -= s['price']
+            if remaining <= 0:
+                break
+        # Если не набрали ни одного скина (слишком маленькая ставка), просто кладём деньги
+        if not skins_to_give:
+            user['balance'] += doubled_value
+            msg = f'Вы удвоили! +${doubled_value} на баланс'
+            add_history(user, 'Double Win (баланс)', skin['name'], doubled_value)
+        else:
+            # Добавляем скины в инвентарь
+            for s in skins_to_give:
+                inv.append(s['id'])
+            # Остаток на баланс
+            if remaining > 0:
+                user['balance'] += remaining
+            names = ', '.join([s['name'] for s in skins_to_give])
+            msg = f'Вы удвоили! Получены: {names}'
+            if remaining > 0:
+                msg += f' + ${remaining} на баланс'
+            add_history(user, 'Double Win (скины)', f'{skin["name"]} → {names}', doubled_value)
         add_xp(user, 30)
-        add_win_to_feed(user['nickname'], skin['name'] + ' (Double)', skin['price']*2, skin['image'])
+        add_win_to_feed(user['nickname'], skin['name'] + ' (Double)', doubled_value, skin['image'])
     else:
         inv.remove(skin_id)
         msg = 'Вы проиграли скин :('
@@ -444,6 +475,7 @@ def update_profile():
     save_users(users)
     return jsonify({'status': 'ok'})
 
+# ======================== ЗАПУСК ========================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

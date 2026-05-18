@@ -485,6 +485,47 @@ body {
     text-decoration: underline;
 }
 
+/* ===== СТАТИСТИКА САЙТА (index) ===== */
+.site-stats {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-bottom: 35px;
+    flex-wrap: wrap;
+}
+.stat-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 15px 30px;
+    text-align: center;
+    min-width: 130px;
+    transition: 0.2s;
+}
+.stat-card:hover {
+    border-color: var(--gold);
+    box-shadow: 0 8px 20px rgba(241,196,15,0.15);
+}
+.stat-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 6px;
+}
+.stat-number {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--gold);
+    display: block;
+}
+.stat-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
 /* ===== СТРАНИЦА АПГРЕЙДА ===== */
 .upgrade-container {
     display: flex;
@@ -690,7 +731,7 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
-/* ===== DOUBLE OR NOTHING АНИМАЦИИ ===== */
+/* ===== DOUBLE OR NOTHING АНИМАЦИИ (общие для модалок) ===== */
 .double-animation-container {
     width: 120px;
     height: 120px;
@@ -923,6 +964,25 @@ body {
     border-bottom: 1px solid var(--border-color);
     font-size: 0.8rem;
     flex-wrap: wrap;
+}
+
+/* ===== КНОПКА DOUBLE В ПРОФИЛЕ ===== */
+.btn-double-profile {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: #000;
+    font-size: 0.7rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    margin-left: 8px;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    transition: 0.2s;
+}
+.btn-double-profile:hover {
+    box-shadow: 0 0 12px rgba(243,156,18,0.6);
+    transform: scale(1.03);
 }
 
 /* ===== ФУТЕР ===== */

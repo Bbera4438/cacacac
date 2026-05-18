@@ -56,11 +56,14 @@
             <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">🎒 ИНВЕНТАРЬ</h3>
             {% if inventory %}
                 {% for skin in inventory %}
-                <div class="inventory-slot">
+                <div class="inventory-slot" style="cursor: default;">
                     <img src="{{ url_for('static', filename='images/' + skin.image) }}" alt="{{ skin.name }}" style="width: 50px; height: 50px; object-fit: contain;">
                     <span class="inventory-slot-name">{{ skin.name }}</span>
                     <span class="inventory-slot-price">${{ skin.price }}</span>
-                    <button class="btn btn-sell" onclick="sellSkin({{ skin.id }})">💰 Продать</button>
+                    <div class="inventory-actions" style="margin-left: auto; display: flex; gap: 5px;">
+                        <button class="btn btn-sell" onclick="sellSkin({{ skin.id }})">💰 Продать</button>
+                        <button class="btn btn-double-profile" onclick="startDoubleFromProfile({{ skin.id }})">🎲 Double</button>
+                    </div>
                 </div>
                 {% endfor %}
             {% else %}
@@ -136,6 +139,27 @@ function sellSkin(skinId) {
             alert('Ошибка продажи');
         });
     }
+}
+
+// Double из профиля
+function startDoubleFromProfile(skinId) {
+    if (!confirm('Запустить Double or Nothing для этого скина?')) return;
+    // Простой запрос без анимации, результат в alert
+    fetch('/double', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skin_id: skinId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message);
+        document.querySelector('.balance-value').textContent = '$' + data.balance;
+        location.reload();
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Ошибка Double');
+    });
 }
 </script>
 {% endblock %}

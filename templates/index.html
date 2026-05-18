@@ -6,6 +6,25 @@
     <p class="section-subtitle">Покупай предметы и пробуй апгрейд на колесе удачи</p>
 </section>
 
+<!-- Статистика сайта -->
+<div class="site-stats">
+    <div class="stat-card">
+        <span class="stat-icon">👥</span>
+        <span class="stat-number">{{ total_users }}</span>
+        <span class="stat-label">Пользователей</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-icon">🎡</span>
+        <span class="stat-number">{{ total_spins }}</span>
+        <span class="stat-label">Апгрейдов</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-icon">🎁</span>
+        <span class="stat-number">Ежедневно</span>
+        <span class="stat-label">Бонус</span>
+    </div>
+</div>
+
 <div class="skins-grid">
     {% for skin in shop_skins %}
     <div class="skin-card" data-rarity="{{ skin.rarity }}">
@@ -37,6 +56,16 @@
     💡 Купленные скины появятся в инвентаре на странице <a href="{{ url_for('upgrade') }}" class="tip-link">Апгрейда</a>
 </div>
 
+<!-- Модальное окно покупки (анимация) -->
+<div class="modal-overlay" id="purchase-modal" style="display: none;">
+    <div class="modal-content">
+        <h2 class="modal-title">🛍️ ПОКУПКА</h2>
+        <div id="purchase-animation" style="font-size: 3rem; margin: 15px 0;">🛒</div>
+        <p id="purchase-message"></p>
+        <button class="btn btn-buy" id="purchase-close-btn" style="margin-top: 15px;">ОК</button>
+    </div>
+</div>
+
 <script>
 // Управление количеством
 document.querySelectorAll('.qty-btn').forEach(btn => {
@@ -54,7 +83,7 @@ document.querySelectorAll('.qty-btn').forEach(btn => {
     });
 });
 
-// Покупка с учётом количества
+// Покупка с модальным окном и анимацией
 document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const skinId = btn.dataset.skinId;
@@ -68,19 +97,34 @@ document.querySelectorAll('.buy-btn').forEach(btn => {
         })
         .then(r => r.json())
         .then(data => {
+            const modal = document.getElementById('purchase-modal');
+            const msg = document.getElementById('purchase-message');
+            const anim = document.getElementById('purchase-animation');
+
             if (data.error) {
-                alert(data.error);
+                msg.textContent = '❌ ' + data.error;
+                msg.style.color = '#e74c3c';
+                anim.textContent = '😞';
             } else {
-                alert(data.message);
+                msg.textContent = '✅ ' + data.message;
+                msg.style.color = '#4caf50';
+                anim.textContent = '🎉';
                 document.querySelector('.balance-value').textContent = '$' + data.balance;
-                location.reload();
+                if (window.playPurchaseSound) window.playPurchaseSound();
+                window.launchConfetti();
             }
+            modal.style.display = 'flex';
         })
         .catch(err => {
             console.error(err);
             alert('Ошибка покупки');
         });
     });
+});
+
+document.getElementById('purchase-close-btn').addEventListener('click', () => {
+    document.getElementById('purchase-modal').style.display = 'none';
+    location.reload();
 });
 </script>
 {% endblock %}

@@ -255,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const skinId = parseInt(doubleBtn.dataset.skinId);
             if (!skinId) return;
 
-            // Отключаем кнопку и запускаем анимацию
             doubleBtn.disabled = true;
             doubleBtn.style.display = 'none';
             const animContainer = document.getElementById('double-anim');
@@ -263,10 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (animContainer) {
                 animContainer.classList.add('double-active');
             }
-            // Звук напряжения
             if (window.playDoubleSound) window.playDoubleSound();
 
-            // Задержка 4 секунды для эффекта, затем запрос на сервер
             setTimeout(() => {
                 fetch('/double', {
                     method: 'POST',
@@ -275,12 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .then(res => res.json())
                 .then(data => {
-                    // Останавливаем анимацию
                     if (animContainer) {
                         animContainer.classList.remove('double-active');
                         animContainer.classList.add(data.win ? 'double-win' : 'double-lose');
                     }
-                    // Показываем результат и звук
                     doubleResult.innerHTML = '';
                     if (data.win) {
                         if (window.playDoubleWin) window.playDoubleWin();
@@ -290,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (window.playDoubleLose) window.playDoubleLose();
                         doubleResult.innerHTML = `<span class="loss-text">😞 ${data.message}</span>`;
                     }
-                    // Обновляем баланс
                     document.querySelector('.balance-value').textContent = '$' + data.balance;
                     window._shouldReload = true;
                 })
