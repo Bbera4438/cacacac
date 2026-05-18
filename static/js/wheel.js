@@ -3,8 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('wheel-wrapper');
 
-    // Сектора в том же порядке, что sector_order в app.py
+    // Сектора
     const sectors = [
         { name: '★ Karambit\nDoppler',        color: '#ffd700', glow: '#fff3b0', id: 100 },
         { name: '★ Butterfly\nSlaughter',     color: '#ff6600', glow: '#ffaa33', id: 101 },
@@ -17,6 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Nothing',                    color: '#666666', glow: '#999999', id: 200 }
     ];
 
+    let selectedIndex = null;
+    window._spinning = false;
+    let currentRotation = 0;
+
+    // Элементы интерфейса
     const spinButton = document.getElementById('spin-button');
     const selectedSkinText = document.getElementById('selected-skin-text');
     const resultModal = document.getElementById('result-modal');
@@ -29,31 +35,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const doubleResult = document.getElementById('double-result');
     const modalCloseBtn = document.getElementById('modal-close-btn');
 
-    let selectedIndex = null;
-    window._spinning = false;   // Глобальный флаг, чтобы upgrade.html не сбрасывал выбор во время вращения
-    let currentRotation = 0;
+    // Адаптивный размер канваса
+    function resizeCanvas() {
+        if (!wrapper) return;
+        const size = Math.min(wrapper.clientWidth, 400);
+        canvas.width = size;
+        canvas.height = size;
+        drawWheel(currentRotation);
+    }
 
-    // ---------- ОТРИСОВКА КОЛЕСА ----------
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Первоначальная установка
+
+    // Отрисовка колеса
     function drawWheel(rotation = 0) {
         const cx = canvas.width / 2;
         const cy = canvas.height / 2;
-        const radius = canvas.width / 2 - 10;
+        const radius = Math.min(cx, cy) - 8;
         const arcSize = (2 * Math.PI) / sectors.length;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Внешнее неоновое кольцо
+        // Неоновое кольцо
         ctx.beginPath();
-        ctx.arc(cx, cy, radius + 4, 0, 2 * Math.PI);
+        ctx.arc(cx, cy, radius + 3, 0, 2 * Math.PI);
         ctx.strokeStyle = 'rgba(241, 196, 15, 0.4)';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         sectors.forEach((sector, i) => {
             const startAngle = i * arcSize + rotation;
             const endAngle = startAngle + arcSize;
 
-            // Основной градиент сектора
             const gradient = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
             gradient.addColorStop(0, sector.color);
             gradient.addColorStop(1, '#1a1a1a');
@@ -64,52 +77,46 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.closePath();
             ctx.fillStyle = gradient;
             ctx.fill();
-
-            // Золотой разделитель
             ctx.strokeStyle = '#f1c40f';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Текст сектора с тенью
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(startAngle + arcSize / 2);
             ctx.textAlign = "right";
             ctx.fillStyle = '#ffffff';
-            ctx.font = "bold 12px Roboto, sans-serif";
+            ctx.font = `bold ${Math.max(10, radius/20)}px Roboto, sans-serif`;
             ctx.shadowColor = sector.glow;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 6;
             const lines = sector.name.split('\n');
             lines.forEach((line, idx) => {
-                ctx.fillText(line, radius - 12, -5 + idx * 15);
+                ctx.fillText(line, radius - 10, -4 + idx * (radius/16));
             });
             ctx.shadowBlur = 0;
             ctx.restore();
         });
 
-        // Центральная "золотая монета"
+        // Центр
         ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
-        const coinGrad = ctx.createRadialGradient(cx-5, cy-5, 2, cx, cy, 22);
+        ctx.arc(cx, cy, radius * 0.08, 0, 2 * Math.PI);
+        const coinGrad = ctx.createRadialGradient(cx-2, cy-2, 1, cx, cy, radius*0.08);
         coinGrad.addColorStop(0, '#fff7cc');
         coinGrad.addColorStop(0.4, '#f1c40f');
         coinGrad.addColorStop(1, '#b8860b');
         ctx.fillStyle = coinGrad;
         ctx.fill();
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.stroke();
-        // Логотип CS в центре
-        ctx.font = "bold 14px Orbitron, sans-serif";
+        ctx.font = `bold ${Math.max(10, radius/12)}px Orbitron, sans-serif`;
         ctx.fillStyle = '#000';
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText('GO', cx, cy);
     }
 
-    drawWheel(0);
-
-    // ---------- ВЫБОР СКИНА (ОБРАБОТЧИК) ----------
+    // Выбор слота
     document.querySelectorAll('.inventory-slot').forEach(slot => {
         slot.addEventListener('click', () => {
             if (window._spinning) return;
@@ -121,14 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = slot.querySelector('.inventory-slot-name').textContent;
             selectedSkinText.textContent = `Выбран: ${name}`;
             if (window.playClickSound) window.playClickSound();
-
-            // Активируем кнопку шансов (она уже привязана к индексу в upgrade.html)
             const oddsBtn = document.getElementById('odds-button');
             if (oddsBtn) oddsBtn.disabled = false;
         });
     });
 
-    // ---------- СПИН ----------
+    // Спин
     spinButton.addEventListener('click', () => {
         if (window._spinning || selectedIndex === null) return;
         window._spinning = true;
@@ -146,27 +151,20 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => res.json())
         .then(data => {
             const sectorIndex = data.sector_index;
-
             animateWheelToSector(sectorIndex, () => {
-                // Звук результата
                 if (data.outcome_name !== 'Nothing') {
                     if (window.playWinSound) window.playWinSound();
                 } else {
                     if (window.playLoseSound) window.playLoseSound();
                 }
 
-                // Удаляем поставленный скин из DOM (сервер уже изменил инвентарь)
                 updateInventoryAfterSpin(selectedIndex, data.outcome_name !== 'Nothing');
-
-                // Показываем модальное окно
                 showResultModal(data);
 
-                // Конфетти при редком выигрыше
                 if (data.outcome_name !== 'Nothing' && ['classified', 'covert', 'rare_special'].includes(data.outcome_rarity)) {
                     launchConfetti();
                 }
 
-                // Сброс состояния
                 window._spinning = false;
                 spinButton.disabled = true;
                 spinButton.textContent = 'ВЫБЕРИТЕ СКИН';
@@ -184,22 +182,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ---------- АНИМАЦИЯ К НУЖНОМУ СЕКТОРУ ----------
+    // Анимация к нужному сектору
     function animateWheelToSector(targetSectorIndex, callback) {
         const arcSize = (2 * Math.PI) / sectors.length;
-        const pointerAngle = -Math.PI / 2; // указатель строго вверх
+        const pointerAngle = -Math.PI / 2;
         let targetRotation = pointerAngle - targetSectorIndex * arcSize - arcSize / 2;
         while (targetRotation < 0) targetRotation += 2 * Math.PI;
-        const fullTurns = 5 + Math.floor(Math.random() * 4); // от 5 до 8 полных оборотов
+        const fullTurns = 4 + Math.floor(Math.random() * 3);
         const finalRotation = fullTurns * 2 * Math.PI + targetRotation;
         const startRotation = currentRotation;
-        const duration = 4500; // чуть дольше для эффектности
+        const duration = 4000;
         const startTime = performance.now();
 
         function step(now) {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            // easeOutBack для эффекта "пружины" в конце
             const c1 = 1.70158;
             const c3 = c1 + 1;
             const easeOutBack = 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2);
@@ -214,22 +211,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (callback) callback();
             }
         }
-
         requestAnimationFrame(step);
     }
 
-    // ---------- ОБНОВЛЕНИЕ ИНВЕНТАРЯ (DOM) ----------
     function updateInventoryAfterSpin(usedIndex, win) {
         const slots = document.querySelectorAll('.inventory-slot');
         if (slots.length > usedIndex) {
             slots[usedIndex].remove();
         }
         if (win) {
-            window._shouldReload = true; // инвентарь изменился, перезагрузим после закрытия модального окна
+            window._shouldReload = true;
         }
     }
 
-    // ---------- МОДАЛЬНОЕ ОКНО РЕЗУЛЬТАТА ----------
     function showResultModal(data) {
         modalSelected.textContent = data.selected_name;
         modalOutcome.textContent = data.outcome_name;
@@ -265,12 +259,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- DOUBLE OR NOTHING ----------
     if (doubleBtn) {
         doubleBtn.addEventListener('click', () => {
             const skinId = parseInt(doubleBtn.dataset.skinId);
             if (!skinId) return;
-
             if (window.playDoubleSound) window.playDoubleSound();
 
             fetch('/double', {
@@ -297,7 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- КОНФЕТТИ ----------
     function launchConfetti() {
         if (typeof confetti !== 'function') return;
         const duration = 2000;
@@ -306,16 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         (function frame() {
             confetti({
-                particleCount: 4,
+                particleCount: 3,
                 angle: 60,
-                spread: 60,
+                spread: 55,
                 origin: { x: 0, y: 0.6 },
                 colors: colors
             });
             confetti({
-                particleCount: 4,
+                particleCount: 3,
                 angle: 120,
-                spread: 60,
+                spread: 55,
                 origin: { x: 1, y: 0.6 },
                 colors: colors
             });
