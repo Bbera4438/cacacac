@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Результат апгрейда{% endblock %}
+{% block content %}
+<div class="result-card {% if outcome != 'Nothing' and rarity in ['classified', 'covert', 'rare_special'] %}win-glow{% endif %}">
+    <h1 style="font-family: 'Orbitron', sans-serif; color: var(--gold); margin-bottom: 25px;">РЕЗУЛЬТАТ АПГРЕЙДА</h1>
+
+    <p><strong>Поставлено:</strong> {{ selected }}</p>
+    <p><strong>Выпало:</strong> {{ outcome }}</p>
+
+    {% if outcome != 'Nothing' %}
+        <p class="win-text">🎉 Вы выиграли предмет ценностью ${{ price }}!</p>
+        <div class="double-section">
+            <p>Хотите удвоить ценность?</p>
+            <button class="btn btn-double" id="double-or-nothing-btn" data-skin-id="{{ outcome_id }}">DOUBLE OR NOTHING</button>
+            <div id="double-result" class="double-result"></div>
+        </div>
+    {% else %}
+        <p class="loss-text">😞 К сожалению, ничего не выпало.</p>
+    {% endif %}
+
+    <a href="{{ url_for('upgrade') }}" class="btn btn-buy" style="margin-top: 20px;">ПОПРОБОВАТЬ СНОВА</a>
+</div>
+{% endblock %}

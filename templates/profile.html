@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Профиль{% endblock %}
+{% block content %}
+<section class="shop-header">
+    <h1 class="section-title">👤 ЛИЧНЫЙ КАБИНЕТ</h1>
+    <p class="section-subtitle">Ваша статистика, история и настройки</p>
+</section>
+
+<div class="profile-container">
+    <!-- Сайдбар -->
+    <div class="profile-sidebar">
+        <div class="profile-avatar" id="profile-avatar-display">{{ avatar }}</div>
+        <div class="profile-nickname" id="profile-nickname-display">{{ nickname }}</div>
+        <button class="btn btn-buy" style="margin-top: 15px; width: 100%;" onclick="toggleEditProfile()">✏️ Редактировать</button>
+        <div id="profile-edit" style="display: none; margin-top: 15px;">
+            <input type="text" id="edit-nickname" maxlength="20" placeholder="Новый ник" style="width:100%; padding:8px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:#fff; margin-bottom:8px;">
+            <select id="edit-avatar" style="width:100%; padding:8px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:#fff;">
+                <option value="🔫">🔫 Солдат</option>
+                <option value="🎯">🎯 Снайпер</option>
+                <option value="💣">💣 Бомбер</option>
+                <option value="🛡️">🛡️ Защитник</option>
+                <option value="👑">👑 Элита</option>
+                <option value="💀">💀 Опасный</option>
+            </select>
+            <button class="btn btn-buy" style="width:100%; margin-top:5px;" onclick="saveProfile()">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Контент -->
+    <div class="profile-content">
+        <!-- Статистика -->
+        <div class="profile-card">
+            <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">📊 СТАТИСТИКА</h3>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value">${{ balance }}</div>
+                    <small>Баланс</small>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ level }}</div>
+                    <small>Уровень</small>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ xp }}</div>
+                    <small>Опыт (XP)</small>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ inventory|length }}</div>
+                    <small>Скинов</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Инвентарь -->
+        <div class="profile-card">
+            <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">🎒 ИНВЕНТАРЬ</h3>
+            {% if inventory %}
+                {% for skin in inventory %}
+                <div class="inventory-slot">
+                    <img src="{{ url_for('static', filename='images/' + skin.image) }}" alt="{{ skin.name }}" style="width: 50px; height: 50px; object-fit: contain;">
+                    <span class="inventory-slot-name">{{ skin.name }}</span>
+                    <span class="inventory-slot-price">${{ skin.price }}</span>
+                    <button class="btn btn-sell" onclick="sellSkin({{ skin.id }})">💰 Продать</button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-dim);">Инвентарь пуст.</p>
+            {% endif %}
+        </div>
+
+        <!-- История -->
+        <div class="profile-card">
+            <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">📜 ИСТОРИЯ ОПЕРАЦИЙ</h3>
+            <div class="history-list">
+                {% if history %}
+                    {% for h in history %}
+                    <div class="history-item">
+                        <span>{{ h.action }}</span>
+                        <span style="font-size:0.8rem; color:var(--text-dim);">{{ h.item }}</span>
+                        <span style="color: {% if h.amount >= 0 %}#4caf50{% else %}#e74c3c{% endif %};">
+                            {% if h.amount > 0 %}+{% endif %}${{ h.amount }}
+                        </span>
+                        <span style="font-size:0.7rem; color:var(--text-dim);">{{ h.time }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-dim);">Пока нет записей.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEditProfile() {
+    const edit = document.getElementById('profile-edit');
+    edit.style.display = edit.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveProfile() {
+    const nickname = document.getElementById('edit-nickname').value.trim();
+    const avatar = document.getElementById('edit-avatar').value;
+    fetch('/update_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nickname || undefined, avatar: avatar })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            document.getElementById('profile-nickname-display').textContent = nickname || '{{ nickname }}';
+            document.getElementById('profile-avatar-display').textContent = avatar;
+            document.getElementById('profile-edit').style.display = 'none';
+        }
+    });
+}
+
+function sellSkin(skinId) {
+    if (confirm('Продать этот скин за 70% стоимости?')) {
+        fetch('/sell', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skin_id: skinId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ошибка продажи');
+        });
+    }
+}
+</script>
+{% endblock %}

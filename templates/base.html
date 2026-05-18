@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CS:GO Upgrader{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=4">
+</head>
+<body>
+    <!-- Тёмный анимированный фон (звёздная пыль) -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Live‑фид (кастомный скролл) -->
+    <div class="live-feed-bar" id="live-feed-bar">
+        <div class="live-feed-track" id="live-feed-track">
+            <!-- Наполнится через JavaScript -->
+        </div>
+    </div>
+
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="{{ url_for('index') }}" class="logo">
+                <span class="logo-icon">🔫</span> CS:GO <span class="logo-accent">UPGRADER</span>
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.path == url_for('index') %}active{% endif %}">
+                    <span class="nav-icon">🛒</span> Магазин
+                </a>
+                <a href="{{ url_for('upgrade') }}" class="nav-link {% if request.path == url_for('upgrade') %}active{% endif %}">
+                    <span class="nav-icon">🎡</span> Апгрейд
+                </a>
+                <a href="{{ url_for('profile') }}" class="nav-link {% if request.path == url_for('profile') %}active{% endif %}">
+                    <span class="nav-icon">👤</span> Профиль
+                </a>
+            </div>
+            <div class="nav-right">
+                {% if user %}
+                <div class="level-badge" title="Уровень">🎖️ {{ level }}</div>
+                <div class="balance-block">
+                    <span class="balance-label">Баланс</span>
+                    <span class="balance-value">${{ balance }}</span>
+                </div>
+                <button id="daily-bonus-btn" class="btn btn-bonus" title="Ежедневный бонус">🎁</button>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout">Выйти</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-login">Войти</a>
+                <a href="{{ url_for('register') }}" class="btn btn-register">Регистрация</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>© 2024 CS:GO Upgrader. Все скины являются собственностью Valve Corporation.</p>
+    </footer>
+
+    <!-- Звуковой движок (Web Audio API) -->
+    <script>
+        (function() {
+            window.AudioCtx = window.AudioContext || window.webkitAudioContext;
+            window.audioCtx = new AudioCtx();
+
+            function playTone(freq, duration, type = 'sine', vol = 0.3) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + duration);
+            }
+
+            function playNoise(duration) {
+                const bufferSize = audioCtx.sampleRate * duration;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1000;
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+                noise.stop(audioCtx.currentTime + duration);
+            }
+
+            window.playSpinSound = () => {
+                const now = audioCtx.currentTime;
+                for (let i = 0; i < 20; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.value = 80 + Math.random() * 200;
+                    gain.gain.setValueAtTime(0.05, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.05);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.05);
+                }
+                playTone(60, 2, 'sawtooth', 0.03);
+            };
+
+            window.playWinSound = () => {
+                [523, 659, 784, 1047].forEach((freq, i) => {
+                    playTone(freq, 0.2, 'square', 0.2);
+                });
+                setTimeout(() => playTone(1047, 0.4, 'sine', 0.3), 400);
+            };
+
+            window.playLoseSound = () => {
+                playTone(400, 0.3, 'sawtooth', 0.15);
+                setTimeout(() => playTone(300, 0.3, 'sawtooth', 0.15), 200);
+                setTimeout(() => playNoise(0.4), 100);
+            };
+
+            window.playDoubleSound = () => {
+                for (let i = 0; i < 6; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = 50;
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime + i * 0.2);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.2 + 0.1);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(audioCtx.currentTime + i * 0.2);
+                    osc.stop(audioCtx.currentTime + i * 0.2 + 0.1);
+                }
+            };
+
+            window.playClickSound = () => {
+                playTone(800, 0.05, 'square', 0.1);
+            };
+
+            window.playBonusSound = () => {
+                [440, 554, 660].forEach((freq, i) => {
+                    playTone(freq, 0.15, 'sine', 0.2);
+                });
+            };
+        })();
+    </script>
+
+    <!-- Фон (звёздная пыль) -->
+    <script>
+        (function() {
+            const canvas = document.getElementById('particles-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            const particles = [];
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            for (let i = 0; i < 60; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    size: Math.random() * 2 + 0.5,
+                    opacity: Math.random() * 0.15 + 0.05,
+                    color: Math.random() > 0.5 ? '255, 215, 0' : '255, 255, 255' // золотой или белый
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0) p.x = width;
+                    if (p.x > width) p.x = 0;
+                    if (p.y < 0) p.y = height;
+                    if (p.y > height) p.y = 0;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${p.color}, ${p.opacity})`;
+                    ctx.fill();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+    </script>
+
+    <!-- Live‑feed обновление и прокрутка -->
+    <script>
+        const feedTrack = document.getElementById('live-feed-track');
+
+        function buildFeedItem(item) {
+            return `
+                <div class="feed-item">
+                    <img src="${item.image ? '/static/images/' + item.image : '/static/images/placeholder.png'}" alt="" class="feed-skin-img">
+                    <span class="feed-nickname">${item.nickname}</span>
+                    <span class="feed-outcome">выиграл ${item.outcome}</span>
+                    <span class="feed-price">+$${item.price}</span>
+                </div>
+            `;
+        }
+
+        function updateLiveFeed() {
+            fetch('/live_feed')
+            .then(r => r.json())
+            .then(data => {
+                if (!feedTrack) return;
+                const items = data.map(buildFeedItem).join('');
+                // Дублируем элементы для бесшовной прокрутки
+                feedTrack.innerHTML = items + items;
+            });
+        }
+        updateLiveFeed();
+        setInterval(updateLiveFeed, 7000);
+    </script>
+
+    <!-- Ежедневный бонус -->
+    {% if user %}
+    <script>
+        document.getElementById('daily-bonus-btn').addEventListener('click', () => {
+            fetch('/daily_bonus')
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    if (window.playBonusSound) playBonusSound();
+                    document.querySelector('.balance-value').textContent = '$' + data.balance;
+                    alert(data.message);
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    </script>
+    {% endif %}
+
+    <!-- Библиотека конфетти -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+
+    <script src="{{ url_for('static', filename='js/wheel.js') }}"></script>
+</body>
+</html>

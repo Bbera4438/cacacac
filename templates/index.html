@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Магазин скинов{% endblock %}
+{% block content %}
+<section class="shop-header">
+    <h1 class="section-title">🛒 МАГАЗИН СКИНОВ</h1>
+    <p class="section-subtitle">Покупай предметы и пробуй апгрейд на колесе удачи</p>
+</section>
+
+<div class="skins-grid">
+    {% for skin in shop_skins %}
+    <div class="skin-card" data-rarity="{{ skin.rarity }}">
+        <div class="skin-image">
+            <img src="{{ url_for('static', filename='images/' + skin.image) }}"
+                 alt="{{ skin.name }}"
+                 loading="lazy"
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
+            <div class="skin-rarity-strip rarity-{{ skin.rarity }}"></div>
+        </div>
+        <div class="skin-info">
+            <h3 class="skin-name">{{ skin.name }}</h3>
+            <span class="skin-rarity-text rarity-{{ skin.rarity }}">{{ skin.rarity.upper() }}</span>
+            <div class="skin-footer">
+                <span class="skin-price">${{ skin.price }}</span>
+                <a href="{{ url_for('buy_skin', skin_id=skin.id) }}" class="btn btn-buy">КУПИТЬ</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="shop-tip">
+    💡 Купленные скины появятся в инвентаре на странице <a href="{{ url_for('upgrade') }}" class="tip-link">Апгрейда</a>
+</div>
+{% endblock %}

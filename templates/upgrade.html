@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Апгрейд скинов{% endblock %}
+{% block content %}
+<section class="shop-header">
+    <h1 class="section-title">🎡 АПГРЕЙД СКИНОВ</h1>
+    <p class="section-subtitle">Выбери скин из инвентаря и испытай удачу на колесе</p>
+</section>
+
+<div class="upgrade-container">
+    <!-- Инвентарь -->
+    <div class="inventory-panel">
+        <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 15px; font-size: 1.2rem;">🎒 ИНВЕНТАРЬ</h2>
+        <div id="inventory-list">
+            {% if inventory %}
+                {% for skin in inventory %}
+                <div class="inventory-slot" data-index="{{ loop.index0 }}" data-skin-id="{{ skin.id }}">
+                    <img src="{{ url_for('static', filename='images/' + skin.image) }}"
+                         alt="{{ skin.name }}"
+                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
+                    <div style="flex: 1;">
+                        <span class="inventory-slot-name">{{ skin.name }}</span>
+                        <div style="font-size: 0.8rem; color: var(--text-dim);">${{ skin.price }}</div>
+                    </div>
+                    <div class="inventory-actions">
+                        <button class="btn btn-sell" data-skin-id="{{ skin.id }}" title="Продать за 70% цены">💰</button>
+                    </div>
+                </div>
+                {% endfor %}
+                <button id="odds-button" class="btn btn-buy" style="width: 100%; margin-top: 15px;" disabled>📊 ШАНСЫ ВЫИГРЫША</button>
+            {% else %}
+                <p style="color: var(--text-dim);">Ваш инвентарь пуст. Купите скины в <a href="{{ url_for('index') }}" style="color: var(--gold);">магазине</a>.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Колесо -->
+    <div class="wheel-panel">
+        <div class="wheel-wrapper" id="wheel-wrapper">
+            <canvas id="wheel-canvas" width="400" height="400"></canvas>
+            <div class="wheel-pointer"></div>
+        </div>
+        <div class="spin-controls">
+            <button id="spin-button" class="spin-btn" disabled>ВЫБЕРИТЕ СКИН</button>
+            <p id="selected-skin-text" style="text-align: center; margin-top: 10px; color: var(--text-dim);"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно шансов -->
+<div class="modal-overlay" id="odds-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 550px;">
+        <h2 class="modal-title">📊 ШАНСЫ ВЫИГРЫША</h2>
+        <div id="odds-content" style="max-height: 350px; overflow-y: auto; text-align: left; font-size: 0.9rem;"></div>
+        <button class="btn btn-buy" id="odds-close-btn" style="margin-top: 20px;">ЗАКРЫТЬ</button>
+    </div>
+</div>
+
+<!-- Модальное окно результата -->
+<div class="modal-overlay" id="result-modal" style="display: none;">
+    <div class="modal-content">
+        <h2 class="modal-title">РЕЗУЛЬТАТ АПГРЕЙДА</h2>
+        <p><strong>Поставлено:</strong> <span id="modal-selected"></span></p>
+        <p><strong>Выпало:</strong> <span id="modal-outcome"></span></p>
+        <p class="win-text" id="modal-win-message" style="display: none;"></p>
+        <p class="loss-text" id="modal-loss-message" style="display: none;"></p>
+        <div class="double-section" id="modal-double-section" style="display: none;">
+            <p>Хотите удвоить ценность?</p>
+            <button class="btn btn-double" id="double-or-nothing-btn">DOUBLE OR NOTHING</button>
+            <div id="double-result" class="double-result"></div>
+        </div>
+        <button class="btn btn-buy" id="modal-close-btn" style="margin-top: 20px;">ЗАКРЫТЬ</button>
+    </div>
+</div>
+
+<script>
+// Продажа скина
+document.querySelectorAll('.btn-sell').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const skinId = parseInt(btn.dataset.skinId);
+        if (confirm('Продать этот скин за 70% стоимости?')) {
+            fetch('/sell', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ skin_id: skinId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    document.querySelector('.balance-value').textContent = '$' + data.balance;
+                    location.reload();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Ошибка продажи');
+            });
+        }
+    });
+});
+
+// Отображение шансов
+const oddsBtn = document.getElementById('odds-button');
+const oddsModal = document.getElementById('odds-modal');
+const oddsContent = document.getElementById('odds-content');
+const oddsClose = document.getElementById('odds-close-btn');
+let selectedIndexOdds = null;
+
+// При выборе слота сохраняем индекс и активируем кнопку шансов
+document.querySelectorAll('.inventory-slot').forEach(slot => {
+    slot.addEventListener('click', () => {
+        if (window._spinning) return;
+        selectedIndexOdds = parseInt(slot.dataset.index);
+        if (oddsBtn) oddsBtn.disabled = false;
+    });
+});
+
+if (oddsBtn) {
+    oddsBtn.addEventListener('click', () => {
+        if (selectedIndexOdds === null) return;
+        fetch('/calculate_odds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skin_index: selectedIndexOdds })
+        })
+        .then(r => r.json())
+        .then(data => {
+            oddsContent.innerHTML = data.map(item => `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 6px;">
+                    <img src="/static/images/${item.image}" style="width: 32px; height: 32px; object-fit: contain;" onerror="this.src='/static/images/placeholder.png'">
+                    <span style="flex:1;">${item.name}</span>
+                    <span style="color: var(--gold); font-weight: bold;">${item.probability}%</span>
+                </div>
+            `).join('');
+            oddsModal.style.display = 'flex';
+        })
+        .catch(err => console.error(err));
+    });
+}
+
+if (oddsClose) {
+    oddsClose.addEventListener('click', () => {
+        oddsModal.style.display = 'none';
+    });
+}
+</script>
+{% endblock %}
