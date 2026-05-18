@@ -1,12 +1,12 @@
+import os
+import json
 import random
 import hashlib
-import secrets
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
-app.secret_key = 't@j!Xp9s#vLm2$Qz'
+app.secret_key = 'frutiger-aero-upgrader-2024-secure'
 
 # ======================== БАЗА ДАННЫХ СКИНОВ ========================
 SKINS_DB = {
@@ -53,59 +53,43 @@ UPGRADE_OUTCOMES_BASE = {100: 1, 101: 2, 102: 4, 103: 5, 104: 6, 105: 7, 106: 10
 def get_skin(id):
     return SKINS_DB.get(id)
 
-# ======================== ХРАНИЛИЩЕ ПОЛЬЗОВАТЕЛЕЙ ========================
-USERS = {}  # {user_id: {...}}
-user_counter = 0
+# ======================== ХРАНЕНИЕ ПОЛЬЗОВАТЕЛЕЙ В JSON ========================
+USERS_FILE = 'users.json'
 
-def new_user(login, password):
-    global user_counter
-    user_counter += 1
-    uid = str(user_counter)
-    salt = secrets.token_hex(4)
-    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
-    USERS[uid] = {
-        'id': uid,
-        'login': login,
-        'nickname': login,
-        'password': hashed,
-        'salt': salt,
-        'balance': 1000,
-        'inventory': [],
-        'xp': 0,
-        'history': [],
-        'last_bonus': '2000-01-01T00:00:00',
-        'avatar': 'default'
-    }
-    return uid
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
 
-def check_password(user, password):
-    return user['password'] == hashlib.sha256((password + user['salt']).encode()).hexdigest()
+def save_users(users):
+    with open(USERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(users, f, indent=2, ensure_ascii=False)
 
 def get_current_user():
-    if 'user_id' in session and session['user_id'] in USERS:
-        return USERS[session['user_id']]
-    return None
+    if 'user_id' in session:
+        users = load_users()
+        uid = session['user_id']
+        if uid in users:
+            return uid, users[uid]
+    return None, None
 
-def require_login():
-    if not get_current_user():
-        return redirect(url_for('login'))
-    return None
+# ======================== LIVE FEED ========================
+REAL_WINS = []  # в памяти (можно потерять при рестарте, но это не критично)
 
-# ======================== LIVE FEED (реальные + фейки) ========================
-REAL_WINS = []  # список {nickname, outcome, price, image}
+FAKE_NAMES = ['CyberSlayer', 'Xx_ProGamer_xX', 'AWP_Goddess', 'FadeMaster', 'RushB_no_stop',
+              'ToxicKid', 'NitroBoost', 'EzKatka', 'SilverElite', 'GlobalNinja']
 
-def add_win(nickname, skin):
+def add_win_to_feed(nickname, outcome_name, price, image):
     global REAL_WINS
     REAL_WINS.insert(0, {
         'nickname': nickname,
-        'outcome': skin['name'],
-        'price': skin['price'],
-        'image': skin['image']
+        'outcome': outcome_name,
+        'price': price,
+        'image': image
     })
     if len(REAL_WINS) > 20:
         REAL_WINS.pop()
-
-FAKE_NAMES = ['CyberSlayer', 'Xx_ProGamer_xX', 'AWP_Goddess', 'FadeMaster', 'RushB_no_stop', 'ToxicKid', 'NitroBoost', 'EzKatka', 'SilverElite', 'GlobalNinja']
 
 def generate_fake_wins(count=3):
     fake = []
@@ -123,23 +107,23 @@ def generate_fake_wins(count=3):
     return fake
 
 # ======================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ========================
-def add_history(user, action, item_name, amount):
-    user['history'].insert(0, {
+def add_history(user_data, action, item_name, amount):
+    user_data.setdefault('history', [])
+    user_data['history'].insert(0, {
         'action': action,
         'item': item_name,
         'amount': amount,
         'time': datetime.now().strftime('%H:%M:%S')
     })
-    if len(user['history']) > 30:
-        user['history'].pop()
+    if len(user_data['history']) > 30:
+        user_data['history'].pop()
 
-def add_xp(user, amount):
-    user['xp'] += amount
+def add_xp(user_data, amount):
+    user_data['xp'] = user_data.get('xp', 0) + amount
 
-def get_level(user):
-    return user['xp'] // 100 + 1
+def get_level(user_data):
+    return user_data.get('xp', 0) // 100 + 1
 
-# ======================== РАСЧЁТ ШАНСОВ ========================
 def calculate_odds(bet_price):
     mod_weights = {}
     for oid, base_weight in UPGRADE_OUTCOMES_BASE.items():
@@ -165,19 +149,19 @@ def calculate_odds(bet_price):
     return odds
 
 # ======================== МАРШРУТЫ ========================
-
 @app.before_request
 def make_session_permanent():
     session.permanent = True
 
-# Авторизация
+# --- АВТОРИЗАЦИЯ ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         login = request.form.get('login', '').strip()
         password = request.form.get('password', '')
-        for uid, user in USERS.items():
-            if user['login'] == login and check_password(user, password):
+        users = load_users()
+        for uid, user in users.items():
+            if user['login'] == login and hashlib.sha256((password + user['salt']).encode()).hexdigest() == user['password']:
                 session['user_id'] = uid
                 return redirect(url_for('index'))
         return render_template('login.html', error='Неверный логин или пароль')
@@ -190,9 +174,25 @@ def register():
         password = request.form.get('password', '')
         if not login or not password:
             return render_template('register.html', error='Заполните все поля')
-        if any(u['login'] == login for u in USERS.values()):
+        users = load_users()
+        if any(u['login'] == login for u in users.values()):
             return render_template('register.html', error='Пользователь уже существует')
-        uid = new_user(login, password)
+        uid = str(len(users) + 1)
+        salt = os.urandom(4).hex()
+        hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+        users[uid] = {
+            'login': login,
+            'password': hashed,
+            'salt': salt,
+            'balance': 1000,
+            'inventory': [],
+            'xp': 0,
+            'history': [],
+            'last_bonus': '2000-01-01T00:00:00',
+            'avatar': 'default',
+            'nickname': login
+        }
+        save_users(users)
         session['user_id'] = uid
         return redirect(url_for('index'))
     return render_template('register.html')
@@ -202,21 +202,18 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-# Главная (магазин)
+# --- ГЛАВНАЯ (МАГАЗИН) ---
 @app.route('/')
 def index():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return redirect(url_for('login'))
     shop = [get_skin(i) for i in SHOP_SKIN_IDS]
-    return render_template('index.html', user=user,
-                           balance=user['balance'],
-                           shop_skins=shop,
-                           level=get_level(user))
+    return render_template('index.html', user=user, balance=user['balance'], shop_skins=shop, level=get_level(user))
 
 @app.route('/buy/<int:skin_id>')
 def buy_skin(skin_id):
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return redirect(url_for('login'))
     skin = get_skin(skin_id)
@@ -224,47 +221,45 @@ def buy_skin(skin_id):
         return redirect(url_for('index'))
     if user['balance'] >= skin['price']:
         user['balance'] -= skin['price']
-        user['inventory'].append(skin_id)
+        user.setdefault('inventory', []).append(skin_id)
         add_history(user, 'Покупка', skin['name'], -skin['price'])
         add_xp(user, 10)
+        users = load_users()
+        users[uid] = user
+        save_users(users)
     return redirect(url_for('index'))
 
-# Апгрейд
+# --- АПГРЕЙД ---
 @app.route('/upgrade')
 def upgrade():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return redirect(url_for('login'))
-    inv = [get_skin(i) for i in user['inventory']]
-    return render_template('upgrade.html', user=user,
-                           balance=user['balance'],
-                           inventory=inv,
-                           level=get_level(user))
+    inv = [get_skin(i) for i in user.get('inventory', [])]
+    return render_template('upgrade.html', user=user, balance=user['balance'], inventory=inv, level=get_level(user))
 
-# Расчёт шансов (AJAX)
 @app.route('/calculate_odds', methods=['POST'])
 def calc_odds():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     data = request.get_json()
     skin_index = data.get('skin_index', 0)
-    inv = user['inventory']
+    inv = user.get('inventory', [])
     if skin_index < 0 or skin_index >= len(inv):
         return jsonify({'error': 'Неверный индекс'}), 400
     skin = get_skin(inv[skin_index])
     odds = calculate_odds(skin['price'])
     return jsonify(odds)
 
-# Спин
 @app.route('/spin', methods=['POST'])
 def spin():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     data = request.get_json()
     skin_index = data.get('skin_index', 0)
-    inv = user['inventory']
+    inv = user.get('inventory', [])
     if skin_index < 0 or skin_index >= len(inv):
         return jsonify({'error': 'invalid index'}), 400
 
@@ -273,7 +268,6 @@ def spin():
     bet_price = selected_skin['price']
     del inv[skin_index]
 
-    # Модифицированные веса
     mod_weights = {}
     for oid, base_weight in UPGRADE_OUTCOMES_BASE.items():
         outcome = get_skin(oid)
@@ -298,11 +292,17 @@ def spin():
 
     if outcome_skin['name'] != 'Nothing':
         inv.append(outcome_id)
+
     add_history(user, 'Апгрейд', selected_skin['name'] + ' → ' + outcome_skin['name'], 0)
     add_xp(user, 20)
 
     if outcome_skin['name'] != 'Nothing':
-        add_win(user['nickname'], outcome_skin)
+        add_win_to_feed(user['nickname'], outcome_skin['name'], outcome_skin['price'], outcome_skin['image'])
+
+    # Сохраняем пользователя
+    users = load_users()
+    users[uid] = user
+    save_users(users)
 
     sector_order = [100, 101, 102, 103, 104, 105, 106, 107, 200]
     sector_index = sector_order.index(outcome_id) if outcome_id in sector_order else 0
@@ -318,12 +318,12 @@ def spin():
 
 @app.route('/double', methods=['POST'])
 def double_or_nothing():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     data = request.get_json()
     skin_id = data.get('skin_id')
-    inv = user['inventory']
+    inv = user.get('inventory', [])
     if skin_id not in inv:
         return jsonify({'error': 'Скин не найден в инвентаре'}), 400
 
@@ -338,23 +338,26 @@ def double_or_nothing():
         msg = f'Вы удвоили! +${skin["price"]*2}'
         add_history(user, 'Double Win', skin['name'], skin['price']*2)
         add_xp(user, 30)
-        add_win(user['nickname'], skin)
+        add_win_to_feed(user['nickname'], skin['name'] + ' (Double)', skin['price']*2, skin['image'])
     else:
         inv.remove(skin_id)
         msg = 'Вы проиграли скин :('
         add_history(user, 'Double Lose', skin['name'], -skin['price'])
         add_xp(user, 5)
 
+    users = load_users()
+    users[uid] = user
+    save_users(users)
     return jsonify({'win': win, 'message': msg, 'balance': user['balance']})
 
 @app.route('/sell', methods=['POST'])
 def sell_skin():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     data = request.get_json()
     skin_id = data.get('skin_id')
-    inv = user['inventory']
+    inv = user.get('inventory', [])
     if skin_id not in inv:
         return jsonify({'error': 'Скин не найден'}), 400
     skin = get_skin(skin_id)
@@ -363,11 +366,14 @@ def sell_skin():
     user['balance'] += sell_price
     inv.remove(skin_id)
     add_history(user, 'Продажа', skin['name'], sell_price)
+    users = load_users()
+    users[uid] = user
+    save_users(users)
     return jsonify({'message': f'Продано за ${sell_price} (комиссия ${commission})', 'balance': user['balance']})
 
 @app.route('/daily_bonus')
 def daily_bonus():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     now = datetime.now()
@@ -381,11 +387,14 @@ def daily_bonus():
     user['balance'] += bonus
     user['last_bonus'] = now.isoformat()
     add_history(user, 'Ежедневный бонус', '', bonus)
+    users = load_users()
+    users[uid] = user
+    save_users(users)
     return jsonify({'message': f'Вы получили ${bonus}!', 'balance': user['balance']})
 
 @app.route('/live_feed')
 def live_feed():
-    real = REAL_WINS[:5]  # последние 5 реальных
+    real = REAL_WINS[:5]
     fake = generate_fake_wins(3)
     combined = real + fake
     random.shuffle(combined)
@@ -393,22 +402,18 @@ def live_feed():
 
 @app.route('/profile')
 def profile():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return redirect(url_for('login'))
-    inv = [get_skin(i) for i in user['inventory']]
-    return render_template('profile.html', user=user,
-                           balance=user['balance'],
-                           inventory=inv,
-                           history=user['history'],
-                           xp=user['xp'],
-                           level=get_level(user),
-                           nickname=user['nickname'],
-                           avatar=user['avatar'])
+    inv = [get_skin(i) for i in user.get('inventory', [])]
+    return render_template('profile.html', user=user, balance=user['balance'], inventory=inv,
+                           history=user.get('history', []), xp=user.get('xp', 0),
+                           level=get_level(user), nickname=user.get('nickname', user['login']),
+                           avatar=user.get('avatar', 'default'))
 
 @app.route('/update_profile', methods=['POST'])
 def update_profile():
-    user = get_current_user()
+    uid, user = get_current_user()
     if not user:
         return jsonify({'error': 'Не авторизован'}), 401
     data = request.get_json()
@@ -416,9 +421,12 @@ def update_profile():
         user['nickname'] = data['nickname'][:20]
     if 'avatar' in data:
         user['avatar'] = data['avatar']
+    users = load_users()
+    users[uid] = user
+    save_users(users)
     return jsonify({'status': 'ok'})
 
+# ======================== ЗАПУСК ========================
 if __name__ == '__main__':
-    # Используй переменную окружения PORT (Render сам её выдаст)
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
