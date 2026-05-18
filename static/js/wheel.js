@@ -254,29 +254,54 @@ document.addEventListener('DOMContentLoaded', () => {
         doubleBtn.addEventListener('click', () => {
             const skinId = parseInt(doubleBtn.dataset.skinId);
             if (!skinId) return;
+
+            // Отключаем кнопку и запускаем анимацию
+            doubleBtn.disabled = true;
+            doubleBtn.style.display = 'none';
+            const animContainer = document.getElementById('double-anim');
+            const coin = document.getElementById('double-coin');
+            if (animContainer) {
+                animContainer.classList.add('double-active');
+            }
+            // Звук напряжения
             if (window.playDoubleSound) window.playDoubleSound();
 
-            fetch('/double', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ skin_id: skinId })
-            })
-            .then(res => res.json())
-            .then(data => {
-                doubleResult.innerHTML = '';
-                if (data.win) {
-                    doubleResult.innerHTML = `<span class="win-text">🎉 ${data.message}</span>`;
-                } else {
-                    doubleResult.innerHTML = `<span class="loss-text">😞 ${data.message}</span>`;
-                }
-                document.querySelector('.balance-value').textContent = '$' + data.balance;
-                doubleBtn.style.display = 'none';
-                window._shouldReload = true;
-            })
-            .catch(err => {
-                console.error('Double error:', err);
-                alert('Ошибка Double or Nothing.');
-            });
+            // Задержка 4 секунды для эффекта, затем запрос на сервер
+            setTimeout(() => {
+                fetch('/double', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skin_id: skinId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    // Останавливаем анимацию
+                    if (animContainer) {
+                        animContainer.classList.remove('double-active');
+                        animContainer.classList.add(data.win ? 'double-win' : 'double-lose');
+                    }
+                    // Показываем результат и звук
+                    doubleResult.innerHTML = '';
+                    if (data.win) {
+                        if (window.playDoubleWin) window.playDoubleWin();
+                        doubleResult.innerHTML = `<span class="win-text">🎉 ${data.message}</span>`;
+                        launchConfetti();
+                    } else {
+                        if (window.playDoubleLose) window.playDoubleLose();
+                        doubleResult.innerHTML = `<span class="loss-text">😞 ${data.message}</span>`;
+                    }
+                    // Обновляем баланс
+                    document.querySelector('.balance-value').textContent = '$' + data.balance;
+                    window._shouldReload = true;
+                })
+                .catch(err => {
+                    console.error('Double error:', err);
+                    alert('Ошибка Double or Nothing.');
+                    doubleBtn.style.display = 'inline-block';
+                    doubleBtn.disabled = false;
+                    if (animContainer) animContainer.classList.remove('double-active');
+                });
+            }, 4000);
         });
     }
 

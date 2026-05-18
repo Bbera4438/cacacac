@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CS:GO Upgrader{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=6">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=7">
 </head>
 <body>
     <canvas id="particles-canvas"></canvas>
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <!-- Звуковой движок -->
+    <!-- Звуковой движок (Web Audio API) с расширенными функциями -->
     <script>
         (function() {
             window.AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -135,19 +135,48 @@
                 setTimeout(() => playNoise(0.4), 100);
             };
 
+            // Новый звук напряжения для Double (сердцебиение + высокий тон)
             window.playDoubleSound = () => {
-                for (let i = 0; i < 6; i++) {
+                const now = audioCtx.currentTime;
+                const beats = 10; // число ударов
+                for (let i = 0; i < beats; i++) {
+                    const time = now + i * 0.4;
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.type = 'sine';
                     osc.frequency.value = 50;
-                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime + i * 0.2);
-                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.2 + 0.1);
+                    const volume = 0.1 + (i / beats) * 0.3;
+                    gain.gain.setValueAtTime(volume, time);
+                    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
-                    osc.start(audioCtx.currentTime + i * 0.2);
-                    osc.stop(audioCtx.currentTime + i * 0.2 + 0.1);
+                    osc.start(time);
+                    osc.stop(time + 0.15);
                 }
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.value = 800;
+                gain2.gain.setValueAtTime(0.2, now + beats * 0.4);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + beats * 0.4 + 0.3);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now + beats * 0.4);
+                osc2.stop(now + beats * 0.4 + 0.3);
+            };
+
+            // Звук победы в Double
+            window.playDoubleWin = () => {
+                [523, 659, 784, 1047].forEach((freq, i) => {
+                    playTone(freq, 0.15, 'square', 0.25);
+                });
+                setTimeout(() => playTone(1047, 0.5, 'sine', 0.4), 300);
+            };
+
+            // Звук проигрыша в Double
+            window.playDoubleLose = () => {
+                playTone(200, 0.5, 'sawtooth', 0.2);
+                setTimeout(() => playNoise(0.6), 200);
             };
 
             window.playClickSound = () => {
@@ -212,7 +241,7 @@
         })();
     </script>
 
-    <!-- Live‑feed обновление -->
+    <!-- Live‑feed обновление и прокрутка -->
     <script>
         const feedTrack = document.getElementById('live-feed-track');
 

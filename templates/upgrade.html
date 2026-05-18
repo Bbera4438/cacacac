@@ -65,6 +65,9 @@
         <p class="loss-text" id="modal-loss-message" style="display: none;"></p>
         <div class="double-section" id="modal-double-section" style="display: none;">
             <p>Хотите удвоить ценность?</p>
+            <div class="double-animation-container" id="double-anim">
+                <div class="coin" id="double-coin">💰</div>
+            </div>
             <button class="btn btn-double" id="double-or-nothing-btn">DOUBLE OR NOTHING</button>
             <div id="double-result" class="double-result"></div>
         </div>
@@ -109,7 +112,6 @@ const oddsContent = document.getElementById('odds-content');
 const oddsClose = document.getElementById('odds-close-btn');
 let selectedIndexOdds = null;
 
-// При выборе слота сохраняем индекс и активируем кнопку шансов
 document.querySelectorAll('.inventory-slot').forEach(slot => {
     slot.addEventListener('click', () => {
         if (window._spinning) return;
